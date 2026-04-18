@@ -1,0 +1,15 @@
+{
+  "name": "Strong Chicken Journal",
+  "short_name": "StrongChicken",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#FAFAF9",
+  "theme_color": "#F97316",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2003/2003614.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
