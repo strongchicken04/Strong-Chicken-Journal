@@ -237,3 +237,55 @@ Prehled Δ vs regime base (vsechny bunky n>=82):
 
 _Detail: results/phaseD_cells.csv, results/phaseD_funnel.txt._
 
+
+---
+
+## FAZE E — DESIGN (IN-SAMPLE, stop/time-box/naklady/expectancy)
+
+In-sample sim (2021-01-01→2025-09-30), ES, C1 +-1 VWAP reverze v rannim okne 10:00-12:00. 2561 eventu. avg denni ATR14=68,9 b; **avg zisk reverze (entry->VWAP)=3,09 b**. NENI OOS.
+
+### #1 Stop-loss sensitivity (win rate, time-box=close)
+
+| stop | upper wr (n=1316) | lower wr (n=1245) |
+|---|---|---|
+| 0,5x ATR | 85,0 % | 88,0 % |
+| 1,0x ATR | 88,1 % | 94,1 % |
+| 1,5x ATR | 88,3 % | 95,0 % |
+| 2,0x ATR | 88,3 % | 95,0 % |
+| no-stop | 88,3 % | 95,0 % |
+
+**Pozor:** ATR je SPATNE meritko pro stop tohoto setupu. Edge=~3 b, ale 1xATR=~69 b. Stopy >=1x ATR se skoro nikdy netrefi (win rate se nemeni), 0,5x ATR (~34 b) urizne jen par procent. Stop v ATR je ~10-20x sirsi nez zachyceny pohyb.
+
+### #2 Time-box (% vsech +-1 eventu zreverzovanych do T, cely den)
+
+| strana | <=60m | <=90m | <=120m | close |
+|---|---|---|---|---|
+| upper | 55,1 % | 62,4 % | 66,8 % | 76,1 % |
+| lower | 61,0 % | 67,8 % | 72,2 % | 81,9 % |
+
+### #3 Naklady ES/MES (odhad, rozsah v BODECH round-turn)
+
+- ES ($50/bod): komise $2,5-5 + slippage 0,5-2 ticky => **~0,18 b (optim) az 0,60 b (konzerv)**.
+- MES ($5/bod): komise $1-1,5 + slippage 1-2 ticky => **~0,45-0,80 b** (v bodech DRAZ nez ES).
+
+### EXPECTANCY (body/trade) — combined upper+lower, morning
+
+| kombinace | n | win rate | gross | net konzerv (-0,6) | net optim (-0,18) |
+|---|---|---|---|---|---|
+| stop 1x, tbox 90m | 2561 | 78,4 % | **-0,22 b** | -0,82 b | -0,40 b |
+| stop 1x, tbox close | 2561 | 91,0 % | -0,73 b | -1,33 b | -0,91 b |
+| no-stop, tbox 90m | 2561 | 78,4 % | -0,20 b | -0,80 b | -0,38 b |
+| lower only, tbox 60-90m (nejlepsi bunka) | 1245 | ~90 % | -0,02 b | -0,62 b | -0,20 b |
+
+### ⛔ VERDIKT FAZE E DESIGN
+
+**Setup C1 +-1 VWAP mean-reversion ma NULOVOU az ZAPORNOU gross expectancy in-sample, ZAPORNOU po nakladech, napric CELYM gridem stop x time-box.**
+- Pricina: prumerny zisk reverze +3 b, ale nezreverzovane dny (5-15 %) = zavreni prumerne -35 b. Vysoky win rate (85-95 %) je ILUZE ziskovosti — vzacne velke ztraty (trendove dny) prebiji spoustu malych zisku.
+- Kratsi time-box (60-90m) urizne trendovy ocas a zmirni ztratu (close->90m: -0,73->-0,22 b), ale nezachrani.
+- ES/kontrakt konzerv: ~-41 $/trade; MES ~-1 az -4 $/trade. Zadna varianta parametru neni kladna.
+- **Konzervativni vs agresivni naklady:** rozdil ~0,42 b/trade (ES), ale obe varianty jsou zaporne — vysledek NENI citlivy na predpoklad nakladu, je zaporny tak jako tak.
+
+**Dusledek pro OOS:** spoustet gated OOS na setupu se zapornou IS expectancy nema smysl (neni co validovat). Doporuceni: bud (a) prijmout jako dokumentovany NEGATIVNI vysledek, nebo (b) reformulovat setup in-sample (napr. +-2 entry pro vetsi cil, fixni R:R misto pohybliveho VWAP, trend/volatility filtr na vyrazeni trendovych dni) a teprve pak zvazit OOS. **OOS okno zustava nedotcene.**
+
+_Log: phaseE_design_log.txt; projekt 34069923._
+

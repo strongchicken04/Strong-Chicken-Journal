@@ -1,0 +1,43 @@
+2021-01-01 00:00:00 Launching analysis for ab01f265f63599a898196325ffb0e20c with LEAN Engine v2.5.0.0.17914
+2025-10-01 00:00:00 ###ESUM### events=2561 avg_atr=68.94 avg_gain=3.088
+2025-10-01 00:00:00 ###E### side=lower stop=0.5 tbox=60 n=1245 win=940 loss=78 to=227 pnl=-63.2 pnl_win=4804.0 pnl_loss=-2228.7 pnl_to=-2638.6
+2025-10-01 00:00:00 ###E### side=lower stop=0.5 tbox=90 n=1245 win=1005 loss=96 to=144 pnl=-72.9 pnl_win=4888.9 pnl_loss=-2989.8 pnl_to=-1972.0
+2025-10-01 00:00:00 ###E### side=lower stop=0.5 tbox=120 n=1245 win=1033 loss=111 to=101 pnl=-209.3 pnl_win=4870.0 pnl_loss=-3445.1 pnl_to=-1634.2
+2025-10-01 00:00:00 ###E### side=lower stop=0.5 tbox=9999 n=1245 win=1096 loss=140 to=9 pnl=-166.4 pnl_win=4655.1 pnl_loss=-4570.5 pnl_to=-251.0
+2025-10-01 00:00:00 ###E### side=lower stop=1.0 tbox=60 n=1245 win=947 loss=5 to=293 pnl=-49.6 pnl_win=4775.2 pnl_loss=-276.4 pnl_to=-4548.4
+2025-10-01 00:00:00 ###E### side=lower stop=1.0 tbox=90 n=1245 win=1019 loss=8 to=218 pnl=-70.1 pnl_win=4826.8 pnl_loss=-406.5 pnl_to=-4490.4
+2025-10-01 00:00:00 ###E### side=lower stop=1.0 tbox=120 n=1245 win=1055 loss=9 to=181 pnl=-308.8 pnl_win=4745.0 pnl_loss=-488.9 pnl_to=-4565.0
+2025-10-01 00:00:00 ###E### side=lower stop=1.0 tbox=9999 n=1245 win=1171 loss=38 to=36 pnl=-327.6 pnl_win=3626.2 pnl_loss=-2515.0 pnl_to=-1438.8
+2025-10-01 00:00:00 ###E### side=lower stop=1.5 tbox=60 n=1245 win=948 loss=0 to=297 pnl=-24.6 pnl_win=4755.4 pnl_loss=0.0 pnl_to=-4780.0
+2025-10-01 00:00:00 ###E### side=lower stop=1.5 tbox=90 n=1245 win=1020 loss=0 to=225 pnl=-24.8 pnl_win=4806.9 pnl_loss=0.0 pnl_to=-4831.8
+2025-10-01 00:00:00 ###E### side=lower stop=1.5 tbox=120 n=1245 win=1057 loss=0 to=188 pnl=-282.0 pnl_win=4705.4 pnl_loss=0.0 pnl_to=-4987.4
+2025-10-01 00:00:00 ###E### side=lower stop=1.5 tbox=9999 n=1245 win=1183 loss=8 to=54 pnl=-221.2 pnl_win=3290.8 pnl_loss=-871.9 pnl_to=-2640.0
+2025-10-01 00:00:00 ###E### side=lower stop=2.0 tbox=60 n=1245 win=948 loss=0 to=297 pnl=-24.6 pnl_win=4755.4 pnl_loss=0.0 pnl_to=-4780.0
+2025-10-01 00:00:00 ###E### side=lower stop=2.0 tbox=90 n=1245 win=1020 loss=0 to=225 pnl=-24.8 pnl_win=4806.9 pnl_loss=0.0 pnl_to=-4831.8
+2025-10-01 00:00:00 ###E### side=lower stop=2.0 tbox=120 n=1245 win=1057 loss=0 to=188 pnl=-282.0 pnl_win=4705.4 pnl_loss=0.0 pnl_to=-4987.4
+2025-10-01 00:00:00 ###E### side=lower stop=2.0 tbox=9999 n=1245 win=1183 loss=3 to=59 pnl=-321.2 pnl_win=3290.8 pnl_loss=-555.5 pnl_to=-3056.5
+2025-10-01 00:00:00 ###E### side=lower stop=99.0 tbox=60 n=1245 win=948 loss=0 to=297 pnl=-24.6 pnl_win=4755.4 pnl_loss=0.0 pnl_to=-4780.0
+2025-10-01 00:00:00 ###E### side=lower stop=99.0 tbox=90 n=1245 win=1020 loss=0 to=225 pnl=-24.8 pnl_win=4806.9 pnl_loss=0.0 pnl_to=-4831.8
+2025-10-01 00:00:00 ###E### side=lower stop=99.0 tbox=120 n=1245 win=1057 loss=0 to=188 pnl=-282.0 pnl_win=4705.4 pnl_loss=0.0 pnl_to=-4987.4
+2025-10-01 00:00:00 ###E### side=lower stop=99.0 tbox=9999 n=1245 win=1183 loss=0 to=62 pnl=-253.8 pnl_win=3290.8 pnl_loss=0.0 pnl_to=-3544.6
+2025-10-01 00:00:00 ###E### side=upper stop=0.5 tbox=60 n=1316 win=898 loss=36 to=382 pnl=-685.6 pnl_win=4807.6 pnl_loss=-958.2 pnl_to=-4535.0
+2025-10-01 00:00:00 ###E### side=upper stop=0.5 tbox=90 n=1316 win=983 loss=56 to=277 pnl=-480.8 pnl_win=4900.0 pnl_loss=-1504.8 pnl_to=-3876.0
+2025-10-01 00:00:00 ###E### side=upper stop=0.5 tbox=120 n=1316 win=1029 loss=78 to=209 pnl=-662.9 pnl_win=4849.8 pnl_loss=-2237.5 pnl_to=-3275.3
+2025-10-01 00:00:00 ###E### side=upper stop=0.5 tbox=9999 n=1316 win=1119 loss=153 to=44 pnl=-1157.0 pnl_win=4530.4 pnl_loss=-4704.6 pnl_to=-982.8
+2025-10-01 00:00:00 ###E### side=upper stop=1.0 tbox=60 n=1316 win=900 loss=0 to=416 pnl=-640.8 pnl_win=4790.0 pnl_loss=0.0 pnl_to=-5430.9
+2025-10-01 00:00:00 ###E### side=upper stop=1.0 tbox=90 n=1316 win=988 loss=1 to=327 pnl=-490.3 pnl_win=4867.9 pnl_loss=-58.4 pnl_to=-5299.9
+2025-10-01 00:00:00 ###E### side=upper stop=1.0 tbox=120 n=1316 win=1035 loss=3 to=278 pnl=-778.5 pnl_win=4806.0 pnl_loss=-135.1 pnl_to=-5449.4
+2025-10-01 00:00:00 ###E### side=upper stop=1.0 tbox=9999 n=1316 win=1159 loss=27 to=130 pnl=-1551.7 pnl_win=4007.0 pnl_loss=-1300.3 pnl_to=-4258.5
+2025-10-01 00:00:00 ###E### side=upper stop=1.5 tbox=60 n=1316 win=900 loss=0 to=416 pnl=-640.8 pnl_win=4790.0 pnl_loss=0.0 pnl_to=-5430.9
+2025-10-01 00:00:00 ###E### side=upper stop=1.5 tbox=90 n=1316 win=988 loss=0 to=328 pnl=-494.7 pnl_win=4867.9 pnl_loss=0.0 pnl_to=-5362.7
+2025-10-01 00:00:00 ###E### side=upper stop=1.5 tbox=120 n=1316 win=1035 loss=0 to=281 pnl=-777.9 pnl_win=4806.0 pnl_loss=0.0 pnl_to=-5583.9
+2025-10-01 00:00:00 ###E### side=upper stop=1.5 tbox=9999 n=1316 win=1162 loss=2 to=152 pnl=-1461.9 pnl_win=3951.3 pnl_loss=-150.8 pnl_to=-5262.4
+2025-10-01 00:00:00 ###E### side=upper stop=2.0 tbox=60 n=1316 win=900 loss=0 to=416 pnl=-640.8 pnl_win=4790.0 pnl_loss=0.0 pnl_to=-5430.9
+2025-10-01 00:00:00 ###E### side=upper stop=2.0 tbox=90 n=1316 win=988 loss=0 to=328 pnl=-494.7 pnl_win=4867.9 pnl_loss=0.0 pnl_to=-5362.7
+2025-10-01 00:00:00 ###E### side=upper stop=2.0 tbox=120 n=1316 win=1035 loss=0 to=281 pnl=-777.9 pnl_win=4806.0 pnl_loss=0.0 pnl_to=-5583.9
+2025-10-01 00:00:00 ###E### side=upper stop=2.0 tbox=9999 n=1316 win=1162 loss=0 to=154 pnl=-1447.2 pnl_win=3951.3 pnl_loss=0.0 pnl_to=-5398.4
+2025-10-01 00:00:00 ###E### side=upper stop=99.0 tbox=60 n=1316 win=900 loss=0 to=416 pnl=-640.8 pnl_win=4790.0 pnl_loss=0.0 pnl_to=-5430.9
+2025-10-01 00:00:00 ###E### side=upper stop=99.0 tbox=90 n=1316 win=988 loss=0 to=328 pnl=-494.7 pnl_win=4867.9 pnl_loss=0.0 pnl_to=-5362.7
+2025-10-01 00:00:00 ###E### side=upper stop=99.0 tbox=120 n=1316 win=1035 loss=0 to=281 pnl=-777.9 pnl_win=4806.0 pnl_loss=0.0 pnl_to=-5583.9
+2025-10-01 00:00:00 ###E### side=upper stop=99.0 tbox=9999 n=1316 win=1162 loss=0 to=154 pnl=-1447.2 pnl_win=3951.3 pnl_loss=0.0 pnl_to=-5398.4
+2025-10-01 00:00:00 Algorithm Id:(ab01f265f63599a898196325ffb0e20c) completed in 43.83 seconds at 137k data points per second. Processing total of 6,011,798 data points.
