@@ -18,7 +18,7 @@ from collections import deque
 # předchozích dnů; dnešek se přidá až po emisi); OOS 2025-10-01+ vyloučeno.
 # =====================================================================
 
-EXPORT_SYMBOL = "SPY"          # <<< přepínač: "SPY" nebo "ES"
+EXPORT_SYMBOL = "ES"           # <<< přepínač: "SPY" nebo "ES"
 
 RTH_OPEN_MIN = 9 * 60 + 30     # 570  9:30
 FIRST15_END_MIN = 9 * 60 + 45  # 585  9:45
