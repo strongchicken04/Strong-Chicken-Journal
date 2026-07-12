@@ -79,9 +79,9 @@ class Phase0Baseline(QCAlgorithm):
         d = st_time.date()
 
         for sym, state in self._state.items():
-            bar = data.bars.get(sym) if data.bars is not None else None
-            if bar is None:
+            if sym not in data.bars:
                 continue
+            bar = data.bars[sym]
             state.bars_seen += 1
 
             # --- rollover dne: dokončený předchozí den ulož do 7denního okna ---
@@ -128,6 +128,7 @@ class Phase0Baseline(QCAlgorithm):
             out = n - ins
             pct_in = (100.0 * ins / n) if n else 0.0
             pct_out = (100.0 * out / n) if n else 0.0
+            # --- logy (syrové, i pro lokální parsing) ---
             self.log(f"###RESULT### {label} bars_seen={state.bars_seen} "
                      f"n={n} inside={ins} outside={out} "
                      f"pct_inside={pct_in:.4f} pct_outside={pct_out:.4f}")
@@ -136,4 +137,10 @@ class Phase0Baseline(QCAlgorithm):
                 ypct = (100.0 * yi / yn) if yn else 0.0
                 self.log(f"###YEAR### {label} year={yr} n={yn} inside={yi} "
                          f"pct_inside={ypct:.4f}")
+            # --- runtime statistics (spolehlivě čitelné přes backtests/read) ---
+            self.set_runtime_statistic(f"{label}_n", str(n))
+            self.set_runtime_statistic(f"{label}_inside", str(ins))
+            self.set_runtime_statistic(f"{label}_outside", str(out))
+            self.set_runtime_statistic(f"{label}_inside_pct", f"{pct_in:.4f}")
+            self.set_runtime_statistic(f"{label}_bars_seen", str(state.bars_seen))
         self.log("============================================================")
