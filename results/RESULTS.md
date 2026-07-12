@@ -77,3 +77,60 @@ srovnání). Referenční hodnota z dosavadního výzkumu (SPY): **~81,53 % insi
 2. ✅ ES overnight data potvrzena (extended hours).
 3. ⚠️ **Baseline 52,21 % je citlivá na definici** naivní reverze. Nejlíp sedí na malý práh: SPY 10pt raw=51,63 %, ES 20pt excl-tie=51,98 %. Symetrická 30bodová bariéra generuje hodně „ties" (cena se do 16:00 netrefí ani jedním směrem) → raw padá. **Nutno potvrdit přesnou definici** (bariéra vs. exit-na-close, jak počítat ties, který instrument) jako outcome proměnnou pro Fázi B.
 
+
+---
+
+## FAZE B - Breakout promenne (jednotlive, A1)
+
+Primarni instrument **ES** (obchodovany), SPY = korelovany robustness check (NEpoolovano - stejny den ~ stejna udalost). Testy pro 3 outcome definice (sensitivity). `*` = Fisher p<0,05 vs. zbytek.
+
+**Overall baselines (breakout):**
+
+- ES: rev30_excl=53.73% | rev30_raw=35.12% | rev10_raw=49.76%
+- SPY: rev30_excl=57.63% | rev30_raw=31.63% | rev10_raw=51.63%
+
+**ES | outcome = rev30_excl (podmineno na +-30 pohyb; reverze vs. pokracovani):**
+
+| promenna | bucket | n | win rate | 95% CI (Wilson) | delta vs base | Fisher p |
+|---|---|---|---|---|---|---|
+| B1_direction | long | 79 | 55.7% | [44.73, 66.13] | +1.96pp | 0.6019 |
+| B1_direction | short | 55 | 50.91% | [38.08, 63.62] | -2.82pp | 0.6019 |
+| B2_dist_atr | small | 38 | 52.63% | [37.26, 67.52] | -1.1pp | 1.0 |
+| B2_dist_atr | med | 46 | 54.35% | [40.18, 67.85] | +0.62pp | 1.0 |
+| B2_dist_atr | large | 50 | 54.0% | [40.4, 67.03] | +0.27pp | 1.0 |
+| B3_vol_ratio | vol>1.0 | 89 | 57.3% | [46.94, 67.07] | +3.57pp | 0.2742 |
+| B3_vol_ratio | vol<=1.0 | 45 | 46.67% | [32.94, 60.92] | -7.06pp | 0.2742 |
+| B5_origin | overnight/gap(2) | 106 | 50.94% | [41.56, 60.26] | -2.79pp | 0.2868 |
+| B5_origin | rth_fresh(1) | 28 | 64.29% | [45.83, 79.29] | +10.55pp | 0.2868 [!]n<30 |
+| B6_poc_dist_atr | poc_low | 59 | 49.15% | [36.84, 61.56] | -4.58pp | 0.3855 |
+| B6_poc_dist_atr | poc_mid | 37 | 59.46% | [43.49, 73.65] | +5.73pp | 0.4438 |
+| B6_poc_dist_atr | poc_high | 38 | 55.26% | [39.71, 69.85] | +1.53pp | 0.8498 |
+| B8_prevday_body | body_neg | 59 | 50.85% | [38.44, 63.16] | -2.88pp | 0.6027 |
+| B8_prevday_body | body_mid | 39 | 51.28% | [36.2, 66.13] | -2.45pp | 0.8489 |
+| B8_prevday_body | body_pos | 36 | 61.11% | [44.86, 75.22] | +7.38pp | 0.3332 |
+| B8_inside_day | inside_day | 9 | 66.67% | [35.42, 87.94] | +12.94pp | 0.5042 [!]n<30 |
+| B8_inside_day | not_inside | 125 | 52.8% | [44.1, 61.34] | -0.93pp | 0.5042 |
+| B7_calendar | event | 12 | 41.67% | [19.33, 68.05] | -12.06pp | 0.5458 [!]n<30 |
+| B7_calendar | non_event | 122 | 54.92% | [46.07, 63.46] | +1.19pp | 0.5458 |
+
+**Klicove signifikantni efekty - jen u `rev30_raw` (tie=loss), konzistentni ES+SPY:**
+
+| instrument | promenna | bucket | n | win rate | delta vs base | Fisher p |
+|---|---|---|---|---|---|---|
+| ES | B1_direction | long | 144 | 30.56% | -4.57pp | 0.0389* |
+| ES | B1_direction | short | 61 | 45.9% | +10.78pp | 0.0389* |
+| ES | B3_vol_ratio | vol>1.0 | 110 | 46.36% | +11.24pp | 0.0004* |
+| ES | B3_vol_ratio | vol<=1.0 | 95 | 22.11% | -13.02pp | 0.0004* |
+| SPY | B1_direction | long | 156 | 26.28% | -5.35pp | 0.0084* |
+| SPY | B1_direction | short | 59 | 45.76% | +14.13pp | 0.0084* |
+| SPY | B3_vol_ratio | vol>1.0 | 110 | 40.91% | +9.28pp | 0.0033* |
+| SPY | B3_vol_ratio | vol<=1.0 | 105 | 21.9% | -9.72pp | 0.0033* |
+
+**Zjisteni Faze B:**
+1. Outcome **rev30_excl** (reverze vs. pokracovani, podmineno na pohyb): ZADNA jednotliva promenna neni signifikantni (vsechna p>0,27) - single-variable reverzni edge tu neni.
+2. Outcome **rev30_raw** (tie=loss): **objem>1,0** (p=0,0004/0,0033) a **short breakout** (p=0,039/0,008) silne a konzistentni ES+SPY - ale predikuji spis JESTLI vubec dojde k +-30 pohybu (volatilita), ne smer reverze.
+3. Ostatni signif. vysledky (rev10 inside_day n=12, B5 origin, body_mid) jsou bud male n nebo nekonzistentni -> pravdepodobne sum.
+4. **Multiple-testing caveat:** ~114 testu -> ~5-6 falesnych p<0,05 ocekavano. Prezivaji jen vol_ratio (velmi silne) a smer.
+
+_Detailni tabulka vsech kombinaci: `results/phaseB_raw.csv`._
+
