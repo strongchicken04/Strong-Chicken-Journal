@@ -1,0 +1,9 @@
+# LEAN local data folder (cloud backtest engine mode – no local data)
+lean_data/
+# Editor scaffolding from lean project-create
+**/.idea/
+**/.vscode/
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
