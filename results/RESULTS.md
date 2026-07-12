@@ -289,3 +289,35 @@ In-sample sim (2021-01-01→2025-09-30), ES, C1 +-1 VWAP reverze v rannim okne 1
 
 _Log: phaseE_design_log.txt; projekt 34069923._
 
+
+---
+
+## FAZE E — REFORMULACE (IN-SAMPLE): fixni bariery + trend filtr
+
+Test: fade na +-1 a +-2 VWAP pasmu (morning), FIXNI symetricke bariery B bodu misto pohybliveho VWAP cile. Symetricka bariera => win rate primo meri edge nad 50 %. Projekt 34070394. entries: b1=2561, b2=1278.
+
+### First-passage win rate (symetricka bariera, no filter)
+
+| entry/side | B(body) rozsah | win rate (excl timeout) |
+|---|---|---|
+| ±1 upper | 4–15 | 48,2–50,3 % |
+| ±1 lower | 4–15 | 48,1–52,6 % |
+| ±2 upper | 4–15 | 45,9–48,6 % |
+| ±2 lower | 4–15 | 48,4–51,2 % |
+
+**Win rate ~48–52 % napric VSIM = hod mincí.** Zadny smerovy edge na VWAP +-1 ani +-2 entry.
+- Nejlepsi bunka: ±1 lower B=15, wr 52,6 %, Wilson CI [49,7 %, 55,5 %] => **zahrnuje 50 %, NEsignifikantni** (navic nejlepsi z 24+ bunek -> multiple testing -> sum).
+- **Trend filtr (VWAP sklon) NEPOMAHA**: vylouceni with-trend nechava win rate ~48–51 %. Counter-trend only zabije vzorek (n<30).
+- Expectancy po nakladech (0,4 b): zaporna vsude krome sumove ±1 lower B15.
+
+### ⛔⛔ FINALNI VERDIKT VYZKUMU
+
+**Ani jeden testovany setup nema obchodovatelny edge na ES/SPY v tomto frameworku (in-sample 2021–2025):**
+1. **Breakout mean-reversion (Faze B):** zadna promenna nepredikuje SMER reverze (rev30_excl p>0,27). To, co bylo signif. (objem, smer), predikuje jen volatilitu.
+2. **VWAP mean-reversion (Faze C/D/E):** vysoky 'reversion' win rate (76–93 %) byl ARTEFAKT asymetrickeho cile (maly pohyblivy VWAP cil). Se symetrickou bariérou win rate = ~50 % (coin flip). Fixni bariery, ±2 entry, trend filtr ani time-box to nezachrani. Gross i net expectancy zaporna/nulova.
+3. **Time-of-day 'edge' (Faze D):** z velke casti confounded time-to-close, ne cisty signal.
+
+**Zaver:** Naivni mean-reversion na 7d pasmu / VWAP pasmu na S&P futures NEMA v tomto obdobi kladnou expectancy po realistickych nakladech. Vysoke win rate byly klamave (asymetrie zisk/ztrata nebo pohyblivy cil). **Doporuceni: NEspoustet gated OOS** (neni pozitivni IS setup k validaci). OOS okno zustava NEDOTCENE. Hodnota vyzkumu = poctive vyvraceni domnele strategie pred nasazenim realneho kapitalu.
+
+_Log: phaseE_reform_log.txt._
+
