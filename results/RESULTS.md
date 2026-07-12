@@ -134,3 +134,54 @@ Primarni instrument **ES** (obchodovany), SPY = korelovany robustness check (NEp
 
 _Detailni tabulka vsech kombinaci: `results/phaseB_raw.csv`._
 
+
+---
+
+## FAZE C - Range-bound promenne (A2 / in-algo ES)
+
+ES, range-bound dny (996), in-sample. C1/C2/C3 in-algo (agregaty pres log), C4 lokalne z A2.
+
+### C1 - VWAP mean-reversion (HLAVNI SETUP)
+
+Event = close protne VWAP +-k*std (od 10:00). Win = navrat k VWAP pred 16:00 (bez stopu; VWAP je pohyblivy cil). TTR = time-to-revert.
+
+| band | strana | n | win rate (navrat k VWAP) | 95% CI (Wilson) | median TTR | IQR |
+|---|---|---|---|---|---|---|
+| +-1 | upper | 1944 | **76.13%** | [74.19, 77.97] | 28 min | [8,68] |
+| +-1 | lower | 1878 | **81.9%** | [80.09, 83.57] | 22 min | [8,62] |
+| +-2 | upper | 967 | **65.77%** | [62.72, 68.69] | 42 min | [18,98] |
+| +-2 | lower | 946 | **73.78%** | [70.89, 76.49] | 48 min | [18,98] |
+
+Srovnani (Fisher): upper vs lower p<0,001 (obe pasma); +-1 vs +-2 upper p=5,2e-09.
+
+### C2 - Initial Balance extension
+
+IB = high/low 9:30-10:30. Po 10:30 prvni pruraz.
+
+- % dni s IB extension: **99,6 %** (992/996) - trivialni (cena skoro vzdy prekroci prvni hodinu).
+- Smer prvni extension: up=521 / down=471 (vyvazene). Prumerna prvni extension = **0,371 ATR**.
+- Trend-following vstup na 1. IB pruraz (TP=SL=1x ATR, exit 16:00): win=56 loss=50 **tie=886** (rozliseno jen 106/992). Z rozlisenych 52,8 % - coin flip. **Zadny trend edge** (range-bound dny netrenduji, 1 ATR se casto netrefi).
+
+### C3 - Intradenni sezonnost (avg 30min range, ES body)
+
+| blok | 0930 | 1000 | 1030 | 1100 | 1130 | 1200 | 1230 | 1300 | 1330 | 1400 | 1430 | 1500 | 1530 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| avg range | 3.77 | 3.67 | 3.13 | 2.79 | 2.56 | 2.38 | **2.25** | 2.41 | 2.33 | 2.65 | 2.61 | 2.70 | 3.14 |
+
+**POTVRZENO:** U-tvar - vysoka vol na open (3,77), midday minimum 12:00-13:30 (nejniz 12:30=2,25), narust po 14:00 (2,65+) a do close (15:30=3,14).
+
+### C4 - Overnight drift jako kontext (lokalne z A2)
+
+- Pearson r(|overnight%|, RTH range/ATR): ES 0,103 (p=1,3e-03), SPY 0,101 (p=1,8e-03). Spearman rho ES 0,137 / SPY 0,128.
+- Terciny |overnight|: RTH range/ATR small->large: ES 0,90->1,00, SPY 0,87->0,97. Mann-Whitney small vs large p<1e-4.
+- **Slaby ale signifikantni**: vetsi overnight pohyb -> mirne vetsi RTH range (r~0,1 => ~1% variance). Jako filtr marginalni.
+
+**Zjisteni Faze C:**
+1. **C1 VWAP reverze je silny edge**: +-1 pasmo -> navrat k VWAP 76-82 %, median ~22-28 min, n~1900/strana. To je jadro strategie.
+2. **Asymetrie**: dolni pasmo (dipy) reverduje vic nez horni (76 vs 82 % na +-1; 66 vs 74 % na +-2) - buy-the-dip bias v uptrendu 2021-2025.
+3. **+-1 > +-2**: jednou na +-2 vyssi sance na pokracovani/trend (66-74 % vs 76-82 %).
+4. C2 IB trend-following bez edge (range-bound dny netrenduji). C3 midday lull potvrzen. C4 overnight kontext slaby.
+5. **Caveat C1**: win = dosazeni VWAP do close BEZ stopu; realny trade se stopem bude mit nizsi win rate. Eventy v ramci dne jsou korelovane.
+
+_Log: phaseC_log.txt; C4: results/phaseC_c4.csv._
+
