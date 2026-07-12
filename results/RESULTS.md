@@ -185,3 +185,55 @@ IB = high/low 9:30-10:30. Po 10:30 prvni pruraz.
 
 _Log: phaseC_log.txt; C4: results/phaseC_c4.csv._
 
+
+---
+
+## FAZE D - Funnel na C1 VWAP reverzi (ES, range-bound)
+
+Dle rozhodnuti: breakout strana (B) ZAHOZENA z funnelu. Zaklad = C1 +-1 VWAP reverze, upper/lower zvlast, +C3 timing overlay, +C4 overnight kontext. 5735 eventu, 996 dni.
+
+### Level 1 - C1 base (+-1)
+
+| strana | n | win rate | 95% CI (Wilson) | pozn |
+|---|---|---|---|---|
+| upper | 1944 | 76,13 % | [74,19, 77,97] | |
+| lower | 1878 | 81,90 % | [80,09, 83,57] | upper vs lower Fisher p<0,0001 |
+
+### Level 2 - +C3 timing (regime startu eventu)
+
+| strana | regime | n | win rate | 95% CI | Δ vs base | Fisher p vs rest |
+|---|---|---|---|---|---|---|
+| upper | morning(10-12) | 1316 | **85.56 %** | [83.56, 87.36] | +9.4 pp | <0.0001 |
+| upper | lull(12-14) | 301 | **68.77 %** | [63.33, 73.74] | -7.4 pp | 0.0015 |
+| upper | afternoon(14-16) | 316 | **46.52 %** | [41.09, 52.03] | -29.6 pp | <0.0001 |
+| lower | morning(10-12) | 1245 | **93.17 %** | [91.63, 94.45] | +11.3 pp | <0.0001 |
+| lower | lull(12-14) | 338 | **73.37 %** | [68.42, 77.8] | -8.5 pp | <0.0001 |
+| lower | afternoon(14-16) | 288 | **45.14 %** | [39.49, 50.91] | -36.8 pp | <0.0001 |
+
+**Per-block (+-1) win rate:**
+- upper: blk1(10:00) 88% → blk8(13:30) 66% → blk12(15:30) 29% (monotonni pokles, n810→85)
+- lower: blk1 94% → blk8 71% → blk12 21%
+
+### ⚠️ KLICOVY CONFOUND (time-to-close)
+Win = navrat k VWAP DO 16:00. Event v 10:00 ma ~6h na navrat, event v 15:30 jen 30 min. Monotonni per-block pokles => timing efekt je ZCASTI artefakt definice, ne cista lepsi reverze rano. Median TTR ~22-28 min => eventy startujici do ~14:30 (blk<=9, >=90 min do close) jsou relativne fair; blk 10-12 (14:30+) jsou casove utnute. I v ramci fair blocku 1-9 je ale realny gradient rano>lull (rano nizsi vol + korekce opening imbalances). **Nutno reseit ve Fazi E time-boxovanou reverzi (revert do X min) nebo realistickym stopem.**
+
+### Level 3 - +C4 overnight tercina (v ramci regime)
+
+Prehled Δ vs regime base (vsechny bunky n>=82):
+- Vetsina Δ jen ±1-3 pp v sumu => overnight NEPRIDAVA konzistentni hodnotu (potvrzuje ocekavani).
+- Jediny naznak: lower/lull/on_large 61,96 % vs base 73,37 % (Δ-11,4 pp, n=92) a lower/lull/on_small 80,15 % (Δ+6,8 pp) => velky overnight moze zhorsit reverzi v midday lull; ale single-cell, multiple comparisons -> spis sum.
+
+**Zjisteni Faze D (funnel):**
+1. **Nejsilnejsi funnel: C1 +-1 reverze v RANNIM okne (10:00-12:00)** - lower 93,2 % (n1245), upper 85,6 % (n1316). Velke n, tesne CI.
+2. **C3 timing je dominantni filtr**, ale zcasti confounded time-to-close (viz caveat). Realny gradient rano>lull>afternoon existuje i po kontrole, ale magnituda je nadhodnocena.
+3. **C4 overnight nepridava** konzistentni hodnotu -> z finalni sady vypustit (nanejvys jako weak exclusion 'velky overnight' v lull).
+4. **Asymetrie lower>upper** zachovana napric regimy.
+5. n zustava zdrave (>280 na regime, >1000 na rannim okne) - zadna vetev pod 40.
+
+**Kandidatni finalni setupy pro Fazi E (OOS):**
+- **Setup L**: lower +-1 VWAP reverze, start 10:00-12:00, exit navrat k VWAP. IS win rate 93,2 % (n1245).
+- **Setup U**: upper +-1 VWAP reverze, start 10:00-12:00. IS win rate 85,6 % (n1316).
+- Caveat: IS win rate je BEZ stopu (navrat do close). Ve Fazi E nutne prepocitat s realistickym stopem (1-1.5x ATR) a time-boxem => ocekavany pokles win rate.
+
+_Detail: results/phaseD_cells.csv, results/phaseD_funnel.txt._
+

@@ -1,0 +1,47 @@
+
+===== FÁZE D FUNNEL — C1 ±1 VWAP reverze (ES) =====
+
+--- Level 1: C1 base (±1) ---
+  upper                        76.13% [74.19%, 77.97%] (n=1944)
+  lower                        81.90% [80.09%, 83.57%] (n=1878)
+  upper vs lower (Fisher)      76.13% [74.19%, 77.97%] (n=1944)  Fisher_p=0.0000
+
+--- Level 2: +C3 timing (regime), upper/lower zvlášť ---
+ [upper] base=76.1%
+  morning(10-12)               85.56% [83.56%, 87.36%] (n=1316)  Δ=+9.4pp  Fisher_p=0.0000
+  lull(12-14)                  68.77% [63.33%, 73.74%] (n=301)  Δ=-7.4pp  Fisher_p=0.0015
+  afternoon(14-16)             46.52% [41.09%, 52.03%] (n=316)  Δ=-29.6pp  Fisher_p=0.0000
+ [lower] base=81.9%
+  morning(10-12)               93.17% [91.63%, 94.45%] (n=1245)  Δ=+11.3pp  Fisher_p=0.0000
+  lull(12-14)                  73.37% [68.42%, 77.80%] (n=338)  Δ=-8.5pp  Fisher_p=0.0000
+  afternoon(14-16)             45.14% [39.49%, 50.91%] (n=288)  Δ=-36.8pp  Fisher_p=0.0000
+
+--- Level 2b: per-block win rate (±1) ---
+ [upper] blk1:88%(n810) blk2:85%(n230) blk3:78%(n145) blk4:78%(n131) blk5:73%(n84) blk6:70%(n71) blk7:66%(n85) blk8:66%(n61) blk9:61%(n88) blk10:54%(n74) blk11:41%(n69) blk12:29%(n85)
+ [lower] blk1:94%(n754) blk2:94%(n236) blk3:87%(n151) blk4:93%(n104) blk5:81%(n100) blk6:69%(n85) blk7:70%(n73) blk8:71%(n80) blk9:68%(n81) blk10:48%(n62) blk11:46%(n59) blk12:21%(n86)
+
+--- Level 3: +C4 overnight tercina (v rámci regime) ---
+ [upper / morning(10-12)] base=85.6%(n1316):
+     on_small                  86.18% [82.71%, 89.05%] (n=456)  Δ=+0.6pp
+     on_med                    86.15% [82.70%, 89.00%] (n=462)  Δ=+0.6pp
+     on_large                  84.17% [80.26%, 87.43%] (n=398)  Δ=-1.4pp
+ [upper / lull(12-14)] base=68.8%(n301):
+     on_small                  72.32% [63.40%, 79.76%] (n=112)  Δ=+3.6pp
+     on_med                    66.67% [56.42%, 75.55%] (n=90)  Δ=-2.1pp
+     on_large                  66.67% [56.91%, 75.18%] (n=99)  Δ=-2.1pp
+ [upper / afternoon(14-16)] base=46.5%(n316):
+     on_small                  52.17% [43.89%, 60.34%] (n=138)  Δ=+5.7pp
+     on_med                    36.78% [27.41%, 47.27%] (n=87)  Δ=-9.7pp
+     on_large                  47.25% [37.32%, 57.41%] (n=91)  Δ=+0.7pp
+ [lower / morning(10-12)] base=93.2%(n1245):
+     on_small                  93.95% [91.29%, 95.84%] (n=430)  Δ=+0.8pp
+     on_med                    94.82% [92.29%, 96.56%] (n=425)  Δ=+1.7pp
+     on_large                  90.51% [87.20%, 93.04%] (n=390)  Δ=-2.7pp
+ [lower / lull(12-14)] base=73.4%(n338):
+     on_small                  80.15% [72.51%, 86.08%] (n=131)  Δ=+6.8pp
+     on_med                    74.78% [66.13%, 81.83%] (n=115)  Δ=+1.4pp
+     on_large                  61.96% [51.75%, 71.21%] (n=92)  Δ=-11.4pp
+ [lower / afternoon(14-16)] base=45.1%(n288):
+     on_small                  44.86% [35.78%, 54.30%] (n=107)  Δ=-0.3pp
+     on_med                    46.46% [36.96%, 56.24%] (n=99)  Δ=+1.3pp
+     on_large                  43.90% [33.67%, 54.68%] (n=82)  Δ=-1.2pp
