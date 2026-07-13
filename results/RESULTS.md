@@ -321,3 +321,25 @@ Test: fade na +-1 a +-2 VWAP pasmu (morning), FIXNI symetricke bariery B bodu mi
 
 _Log: phaseE_reform_log.txt._
 
+
+---
+---
+
+# PROJEKT 2 — Leveraged/Inverse ETF EOD rebalancing flow → intraday momentum
+
+**Hypotéza:** mechanický end-of-day rebalancing flow 2x/3x lev/inverse ETF zesiluje pohyb S&P v posledních 30–60 min RTH ve směru dosavadního denního pohybu; a efekt SÍLÍ v čase úměrně růstu AUM téhle skupiny fondů.
+
+**Prostředí:** stejné (QC Free hybrid). **In-sample:** 2021-01-01→2025-09-30. **OOS (rezervováno):** 2025-10-01→2026-07-11.
+
+## FÁZE 0 — dostupnost dat
+
+| položka | stav |
+|---|---|
+| Minutová data SPY / ES | ✅ přes cloud backtest (jako projekt 1) |
+| Minutová data 10 lev/inverse ETF (TQQQ,SPXL,SSO,SQQQ,SPXS,SDS,UPRO,SPXU,QLD,QID) | ✅ dostupná |
+| Fundamental pole SharesOutstanding / MarketCap | ✅ existují v datasetu |
+| **SharesOutstanding/MarketCap NAPLNĚNÉ pro ETF** | ❌ **0/10 populated** (Morningstar pokrývá firmy, ne fondy) |
+
+**Důsledek:** kontinuální AUM proxy z QC **není dostupný**. Dle pravidla „nevymýšlet aproximaci" → fallback na **subperiod design po kalendářních letech** (konzervativní, bez fabrikace přesnosti). Test „efekt sílí v čase" se dělá porovnáním win rate mezi lety (Fisher). ETF data do datasetu nepotřebujeme — momentum test je čistě z SPY/ES intraday returnů; velikost flow proxujeme velikostí denního pohybu (B5).
+
+**Milestone kontext (jen volný, NE fabrikovaná řada):** veřejně známý řádový růst skupiny lev/inverse ETF (~desítky mld 2021–22 → ~100+ mld 2023–24 → ~150–200 mld 2025–26). Primární subperiod = kalendářní roky (nejméně nafouknutelné); milníky jen jako interpretační rámec.
