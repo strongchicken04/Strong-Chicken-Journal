@@ -390,3 +390,37 @@ Velký/střední pohyb → vyšší shoda (~55 %), malý pohyb → ~48 % (mírn�
 2. **Jen K=60, ne K=30** (posl. půlhodina ~50 %, žádný efekt).
 3. **⚠️ Kladná IS expectancy je ale průměr přes období — a je tažená ranějším obdobím** (2021–23, hlavně 2022). Vzhledem k per-year poklesu <50 % v 2024–25 je recentní expectancy pravděpodobně záporná. Formální temporální test = Fáze C.
 4. **Jádro hypotézy (sílí s AUM v čase) preliminárně VYVRÁCENO** — efekt slábne, ne sílí.
+
+## FÁZE C — časová nestabilita (JÁDRO hypotézy)
+
+**C1 per-year agree60 + expectancy (net_cons = po konzerv. nákladech 1,2 bps):**
+
+| rok | ES agree | ES exp | ES net_cons | SPY agree | SPY exp | avg ATR% |
+|---|---|---|---|---|---|---|
+| 2021 | 51,9 % | +2,67 | +1,47 | 53,8 % | +3,22 | ~1,05 % |
+| **2022** | **57,6 %** | +4,02 | +2,82 | **58,4 %** | +4,19 | **~2,0 %** |
+| 2023 | 53,0 % | +3,06 | +1,86 | 54,0 % | +3,10 | ~1,15 % |
+| 2024 | 47,4 % | −1,49 | −2,69 | 49,8 % | −1,45 | ~1,0 % |
+| 2025 | 48,4 % | +1,08 | −0,12 | 49,2 % | +2,49 | ~1,4 % |
+
+**Early (2021–23) vs Late (2024–25):**
+- ES: 54,2 % vs 47,8 %, **Fisher p=0,035 (signif. POKLES)**; expectancy +3,26 → −0,40 bps
+- SPY: 55,4 % vs 49,5 %, Fisher p=0,052 (hraniční); expectancy +3,51 → +0,23 bps
+
+**🎯 C2/C3 — rozhodující test H_AUM vs H_vol** (AUM proxy nedostupný → místo korelace s AUM korelace roční shody s časem a s volatilitou):
+
+| | ES | SPY |
+|---|---|---|
+| corr(roční agree, čas/rok) — H_AUM predikuje **+** | **−0,67** | **−0,76** |
+| corr(roční agree, roční ATR%) — H_vol predikuje **+** | **+0,72** | **+0,64** |
+
+- **H_AUM (sílí s časem/AUM): VYVRÁCENO** — shoda s časem koreluje **NEGATIVNĚ** (−0,67/−0,76). Efekt SLÁBL, zatímco AUM rostla.
+- **H_vol (silnější ve vysokovolatilním období): PODPOŘENO** — shoda koreluje **pozitivně s roční volatilitou** (+0,72/+0,64). 2022 (bear, ATR 2 %) = nejvyšší shoda; nízkovol 2024 = nejnižší.
+
+**C3 vzorky:** 2024 n~250, 2025 n~186, late 24-25 n~437 — všechny >30, závěr o poklesu je důvěryhodný.
+
+**Zjištění Fáze C:**
+1. **Jádro hypotézy je falzifikováno.** Efekt neroste s růstem AUM — naopak v čase slábne (korelace s časem −0,7).
+2. **Zdánlivý efekt je volatilitně řízený**, ne AUM-flow řízený: klasický intraday momentum silnější v high-vol režimech (+0,7 korelace s vol), ne příběh leveraged-ETF-flow.
+3. **Tradeable expectancy** byla kladná 2021–23 (vč. high-vol 2022), ~nula/záporná v nízkovol 2024–25.
+4. **Důsledek pro D/E:** premisa „zaměř finální setup na nejnovější období" (z promptu, podmíněná potvrzením sílení) **neplatí** — nejnovější období je NEJSLABŠÍ. OOS (2025–26) závisí na vol v OOS okně, ne na AUM.
