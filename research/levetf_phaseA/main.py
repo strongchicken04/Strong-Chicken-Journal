@@ -4,29 +4,27 @@ from collections import deque
 # endregion
 
 # =====================================================================
-# LEV-ETF FÁZE A — EOD momentum dataset (compute-only).
-# Per RTH den: returny na disjunktních oknech (žádný překryv):
-#   r_o_t60 = 9:30->14:00, r_t60_c = 14:00->16:00
-#   r_o_t30 = 9:30->15:00, r_t30_c = 15:00->16:00
-# + atr% (ATR14 do včerejška / cena). Rok = z timestampu.
-# Look-ahead-free (v čase T jen data do T). In-sample only.
-# Export přes chart série (bps). EXPORT_SYMBOL: ES / SPY.
+# LEV-ETF FÁZE A — EOD momentum dataset (compute-only). OPRAVENÉ cutoffy.
+# Hypotéza = posledních 30-60 min RTH:
+#   K=60: predictor r(9:30->15:00), outcome r(15:00->16:00)  [posl. 60 min]
+#   K=30: predictor r(9:30->15:30), outcome r(15:30->16:00)  [posl. 30 min]
+# Disjunktní predictor/outcome okna. + atr% (ATR14 do včerejška / cena).
+# Look-ahead-free, in-sample only. Export chart série (bps). ES / SPY.
 # =====================================================================
 
 EXPORT_SYMBOL = "ES"
 
-OPEN_MIN = 9 * 60 + 30          # 570  (open bar končí 571)
-T60_MIN = 14 * 60              # 840  (14:00)
-T30_MIN = 15 * 60             # 900  (15:00)
-CLOSE_MIN = 16 * 60          # 960  (16:00)
-RTH_OPEN_MIN = 9 * 60 + 30
+RTH_OPEN_MIN = 9 * 60 + 30    # 570
+CUT60_MIN = 15 * 60           # 900  (15:00) = T-60
+CUT30_MIN = 15 * 60 + 30      # 930  (15:30) = T-30
+CLOSE_MIN = 16 * 60           # 960  (16:00)
 
 
 class LevETFPhaseA(QCAlgorithm):
 
     def initialize(self):
         self.set_start_date(2021, 1, 1)
-        self.set_end_date(2025, 9, 30)     # IN-SAMPLE
+        self.set_end_date(2025, 9, 30)
         self.set_cash(100000)
         self.set_time_zone(TimeZones.NEW_YORK)
         if EXPORT_SYMBOL == "SPY":
@@ -49,7 +47,7 @@ class LevETFPhaseA(QCAlgorithm):
     def _reset_day(self, d):
         self.cur_date = d
         self.d_open = self.d_high = self.d_low = self.d_close = None
-        self.p_open = self.p_t60 = self.p_t30 = self.p_close = None
+        self.p_open = self.p_c60 = self.p_c30 = self.p_close = None
         self.emitted = False
 
     def _atr14(self):
@@ -71,42 +69,35 @@ class LevETFPhaseA(QCAlgorithm):
             self._reset_day(d)
         if not (RTH_OPEN_MIN + 1 <= minutes <= CLOSE_MIN):
             return
-        # denní OHLC (RTH)
         if self.d_open is None:
             self.d_open = bar.open
         self.d_high = bar.high if self.d_high is None else max(self.d_high, bar.high)
         self.d_low = bar.low if self.d_low is None else min(self.d_low, bar.low)
         self.d_close = bar.close
-        # snímky cen
-        if minutes == OPEN_MIN + 1 and self.p_open is None:
-            self.p_open = bar.open       # 9:30 open
-        if minutes == T60_MIN:
-            self.p_t60 = bar.close       # 14:00
-        if minutes == T30_MIN:
-            self.p_t30 = bar.close       # 15:00
+        if minutes == RTH_OPEN_MIN + 1 and self.p_open is None:
+            self.p_open = bar.open
+        if minutes == CUT60_MIN:
+            self.p_c60 = bar.close
+        if minutes == CUT30_MIN:
+            self.p_c30 = bar.close
         if minutes == CLOSE_MIN and not self.emitted:
-            self.p_close = bar.close     # 16:00
+            self.p_close = bar.close
             self._emit()
             self.emitted = True
 
     def _emit(self):
-        if None in (self.p_open, self.p_t60, self.p_t30, self.p_close):
+        if None in (self.p_open, self.p_c60, self.p_c30, self.p_close):
             return
         if len(self.daily) < 15:
             return
         atr = self._atr14()
         if atr is None or atr <= 0 or self.p_open <= 0:
             return
-        r_o_t60 = (self.p_t60 / self.p_open - 1) * 10000   # bps
-        r_t60_c = (self.p_close / self.p_t60 - 1) * 10000
-        r_o_t30 = (self.p_t30 / self.p_open - 1) * 10000
-        r_t30_c = (self.p_close / self.p_t30 - 1) * 10000
-        atr_pct = (atr / self.p_open) * 100
-        self.plot("a", "r_o_t60", r_o_t60)
-        self.plot("a", "r_t60_c", r_t60_c)
-        self.plot("a", "r_o_t30", r_o_t30)
-        self.plot("a", "r_t30_c", r_t30_c)
-        self.plot("a", "atr_pct", atr_pct)
+        self.plot("a", "r_pre60", (self.p_c60 / self.p_open - 1) * 10000)
+        self.plot("a", "r_last60", (self.p_close / self.p_c60 - 1) * 10000)
+        self.plot("a", "r_pre30", (self.p_c30 / self.p_open - 1) * 10000)
+        self.plot("a", "r_last30", (self.p_close / self.p_c30 - 1) * 10000)
+        self.plot("a", "atr_pct", (atr / self.p_open) * 100)
         self.n_emit += 1
 
     def _finalize_prev_day(self):
@@ -117,5 +108,4 @@ class LevETFPhaseA(QCAlgorithm):
     def on_end_of_algorithm(self):
         self.set_runtime_statistic("export_symbol", EXPORT_SYMBOL)
         self.set_runtime_statistic("n_days", str(self.n_emit))
-        self.set_runtime_statistic("bars_seen", str(self.bars_seen))
         self.log(f"###ASUM### sym={EXPORT_SYMBOL} n_days={self.n_emit} bars={self.bars_seen}")
