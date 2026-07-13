@@ -12,7 +12,7 @@ from collections import deque
 # Look-ahead-free, in-sample only. Export chart série (bps). ES / SPY.
 # =====================================================================
 
-EXPORT_SYMBOL = "ES"
+EXPORT_SYMBOL = "SPY"
 
 RTH_OPEN_MIN = 9 * 60 + 30    # 570
 CUT60_MIN = 15 * 60           # 900  (15:00) = T-60
