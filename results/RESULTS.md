@@ -424,3 +424,7 @@ Velký/střední pohyb → vyšší shoda (~55 %), malý pohyb → ~48 % (mírn�
 2. **Zdánlivý efekt je volatilitně řízený**, ne AUM-flow řízený: klasický intraday momentum silnější v high-vol režimech (+0,7 korelace s vol), ne příběh leveraged-ETF-flow.
 3. **Tradeable expectancy** byla kladná 2021–23 (vč. high-vol 2022), ~nula/záporná v nízkovol 2024–25.
 4. **Důsledek pro D/E:** premisa „zaměř finální setup na nejnovější období" (z promptu, podmíněná potvrzením sílení) **neplatí** — nejnovější období je NEJSLABŠÍ. OOS (2025–26) závisí na vol v OOS okně, ne na AUM.
+
+## FÁZE D — neplatná (rozhodnutí: cesta A)
+
+Prompt podmiňuje Fázi D potvrzením „efekt sílí". Fáze C to VYVRÁTILA (efekt slábne, je vol-driven). Zvolena **cesta A** = uzavřít jako falzifikaci + PLAYBOOK. Funnel na „nejnovější období" nedává smysl (nejnovější = nejslabší). OOS ponecháno GATED (nespuštěno).
