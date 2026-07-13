@@ -343,3 +343,20 @@ _Log: phaseE_reform_log.txt._
 **Důsledek:** kontinuální AUM proxy z QC **není dostupný**. Dle pravidla „nevymýšlet aproximaci" → fallback na **subperiod design po kalendářních letech** (konzervativní, bez fabrikace přesnosti). Test „efekt sílí v čase" se dělá porovnáním win rate mezi lety (Fisher). ETF data do datasetu nepotřebujeme — momentum test je čistě z SPY/ES intraday returnů; velikost flow proxujeme velikostí denního pohybu (B5).
 
 **Milestone kontext (jen volný, NE fabrikovaná řada):** veřejně známý řádový růst skupiny lev/inverse ETF (~desítky mld 2021–22 → ~100+ mld 2023–24 → ~150–200 mld 2025–26). Primární subperiod = kalendářní roky (nejméně nafouknutelné); milníky jen jako interpretační rámec.
+
+## FÁZE A — EOD momentum dataset
+
+Cutoffy OPRAVENÉ dle hypotézy (posl. 30-60 min): K=60 → 15:00, K=30 → 15:30. Predictor/outcome disjunktní. In-sample. Projekt 34107242, 2 běhy.
+
+| dataset | rows | agree60 overall | agree30 overall | soubor |
+|---|---|---|---|---|
+| ES | 1173 | 51,8 % | 49,2 % | `data/cache/eod_es.csv` |
+| SPY | 1168 | 53,3 % | 50,9 % | `data/cache/eod_spy.csv` |
+
+Sloupce: r_pre60/r_last60/r_pre30/r_last30 (bps), atr_pct, year, agree60/agree30.
+
+**⚠️ Preliminární per-year agree60 (POZOR — směřuje PROTI hypotéze):**
+- ES: 2021=51,9 / 2022=**57,6** / 2023=53,0 / 2024=47,4 / 2025=48,4
+- SPY: 2021=53,8 / 2022=**58,4** / 2023=54,0 / 2024=49,8 / 2025=49,2
+
+Efekt je NEJSILNĚJŠÍ v 2022 (vysoká vol, bear market) a KLESÁ do 2024-25 pod 50 %. To je **opak** hypotézy „sílí s růstem AUM". Konzistentní spíš s „momentum silnější ve vysokovolatilních / velký-pohyb obdobích" (B5), ne s růstem AUM v čase (C). Formální test ve Fázi B/C.
