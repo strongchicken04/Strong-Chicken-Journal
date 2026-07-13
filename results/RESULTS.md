@@ -360,3 +360,33 @@ Sloupce: r_pre60/r_last60/r_pre30/r_last30 (bps), atr_pct, year, agree60/agree30
 - SPY: 2021=53,8 / 2022=**58,4** / 2023=54,0 / 2024=49,8 / 2025=49,2
 
 Efekt je NEJSILNĚJŠÍ v 2022 (vysoká vol, bear market) a KLESÁ do 2024-25 pod 50 %. To je **opak** hypotézy „sílí s růstem AUM". Konzistentní spíš s „momentum silnější ve vysokovolatilních / velký-pohyb obdobích" (B5), ne s růstem AUM v čase (C). Formální test ve Fázi B/C.
+
+## FÁZE B — základní test efektu (celé in-sample, lokální analýza)
+
+Vstup ve směru r_pre, drž do close. Náklady ES round-turn 0,4 (opt) / 1,2 (cons) bps.
+
+| test | agree | 95% CI | vs 50% p | R² | expectancy | net_opt | net_cons |
+|---|---|---|---|---|---|---|---|
+| ES K=60 | 51,8 % | [49,0, 54,7] | 0,22 ns | 0,87 % | +1,90 bps | +1,50 | +0,70 |
+| ES K=30 | 49,2 % | [46,3, 52,0] | 0,60 ns | 0,17 % | +0,16 | −0,24 | −1,04 |
+| SPY K=60 | **53,3 %** | [50,4, 56,1] | **0,028 SIGNIF** | **1,77 %** | +2,29 bps | +1,89 | +1,09 |
+| SPY K=30 | 50,9 % | [48,0, 53,7] | 0,58 ns | 0,95 % | +0,57 | +0,17 | −0,63 |
+
+**B3 sanity:** SPY K=60 R²=1,77 % **sedí do akademického pásma 1,6–2,6 %** (Gao et al) → metoda validní; slabý intraday momentum efekt v regresním smyslu existuje.
+
+**B5 conditioning na velikost pohybu (agree60):**
+
+| bucket | ES | SPY |
+|---|---|---|
+| small | 47,6 % | 48,5 % |
+| med | 55,0 % | 56,0 % |
+| large | 52,9 % | 55,3 % |
+| large vs small Fisher p | 0,15 ns | 0,062 (hraniční) |
+
+Velký/střední pohyb → vyšší shoda (~55 %), malý pohyb → ~48 % (mírná reverze). Hraničně podporuje flow mechanismus.
+
+**Zjištění Fáze B:**
+1. **Slabý statický last-hour (K=60) momentum efekt existuje** (SPY 53,3 % signif., R² 1,77 % dle literatury), **marginálně kladná expectancy i po nákladech** (+0,7 až +1,9 bps) — na rozdíl od minulého projektu tu fixní exit na close nedělá asymetrii zisk/ztráta (avg_win≈avg_loss≈24 bps).
+2. **Jen K=60, ne K=30** (posl. půlhodina ~50 %, žádný efekt).
+3. **⚠️ Kladná IS expectancy je ale průměr přes období — a je tažená ranějším obdobím** (2021–23, hlavně 2022). Vzhledem k per-year poklesu <50 % v 2024–25 je recentní expectancy pravděpodobně záporná. Formální temporální test = Fáze C.
+4. **Jádro hypotézy (sílí s AUM v čase) preliminárně VYVRÁCENO** — efekt slábne, ne sílí.
