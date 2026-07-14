@@ -461,3 +461,17 @@ Prompt podmiňuje Fázi D potvrzením „efekt sílí". Fáze C to VYVRÁTILA (e
 3. **Na large-move dnech kladná cost-adj expectancy** (SPY +4,34 bps, ES +2,90 bps), a to i recentně (SPY +2,65; ES +0,11 marginální).
 4. **⚠️ Reversal Projektu 2:** size-weighted β dokonce ROSTE v čase (2021 0,02 → 2024–25 0,11), zatímco Projekt 2 viděl pokles agree60. Vysvětlení: agree60 (nevážený sign-count) ředí efekt spoustou malých no-flow dní; β (size-weighted) chytá právě big-flow dny. **To znovuotevírá AUM hypotézu v její SPRÁVNÉ (signed×size) formě.**
 5. **Caveaty:** (a) mechanismus zatím NEODLIŠEN od obecného „intraday momentum silnější na velkých dnech" (literatura) — to rozliší až Krok 2 (AUM vážení); (b) β_2024-25 R²6,5 % může být tažené pár extrémními dny (2025 vol spikes) — fragilní; (c) large-move = ~1/3 dní, in-sample, theory-driven conditioning (ne cherry-pick, mechanismus to předpovídá).
+
+### Krok 1b — flow-timing test (dekompozice poslední hodiny, large-move dny)
+
+Flow predikuje koncentraci efektu BLÍŽ ke close (rebalance jede v posl. minutách / MOC).
+
+| sub-okno | SPY β / t / net_exp | ES β / t / net_exp |
+|---|---|---|
+| A: 15:00→15:30 (early) | +0,044 / 4,00 / **+2,82** | +0,042 / 3,87 / **+2,67** |
+| B: 15:30→16:00 (late, u close) | +0,033 / 2,84 / +0,35 | +0,013 / **1,15 ns** / −0,95 |
+
+**Efekt je SILNĚJŠÍ dřív (15:00–15:30) a SLÁBNE ke close** (ES v posl. 30 min nesignifikantní). To je:
+- **Proti** mechanickému flow „executuje se u close" (ten by měl ke close zesilovat).
+- **Možná konzistentní** s tím, že trh flow ANTICIPUJE/front-runuje (pohyb se odehraje dřív, v očekávání známého EOD flow).
+→ Nejednoznačné pro flow-specificitu; přímý arbitr je až Krok 2 (AUM vážení).
