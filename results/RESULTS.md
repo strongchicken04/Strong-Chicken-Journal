@@ -428,3 +428,36 @@ Velký/střední pohyb → vyšší shoda (~55 %), malý pohyb → ~48 % (mírn�
 ## FÁZE D — neplatná (rozhodnutí: cesta A)
 
 Prompt podmiňuje Fázi D potvrzením „efekt sílí". Fáze C to VYVRÁTILA (efekt slábne, je vol-driven). Zvolena **cesta A** = uzavřít jako falzifikaci + PLAYBOOK. Funnel na „nejnovější období" nedává smysl (nejnovější = nejslabší). OOS ponecháno GATED (nespuštěno).
+
+## PROJEKT 2b — přeformulovaný test (signed × velikost flow mechanismu)
+
+**Přeformulace:** Projekt 2 testoval AUM/čas izolovaně (přes agree60 rate a rok-index). Mechanismus ale predikuje **signed, velikostně-škálující** vztah `last60 ~ day_return_to_cutoff`. Kritérium: podpořeno = β>0 sig, přežije vol-kontrolu, ≥0 cost-adj expectancy v nějakém režimu.
+
+**Definice (apples-to-apples s Projektem 2):** cutoff 15:00; r_pre60=9:30→15:00; r_last60=15:00→16:00 (bps). Náklady konzerv. 1,2 bps round-turn.
+
+### Krok 1 (lokální, in-sample)
+
+| test | SPY | ES |
+|---|---|---|
+| [3] signed β (last60~pre60) | β=+0,063 t=4,58 **p=5e-6** R²=1,77 % | β=+0,043 t=3,21 **p=0,001** R²=0,87 % |
+| [5a] **vol-NORMalizovaná** β | β=+0,049 t=3,43 **p=6e-4** | β=+0,040 t=2,84 **p=0,005** | 
+| [5c] β jen v hi-vol tercině | β=+0,080 **p=0,001** (lo/mid ns) | β=+0,056 **p=0,014** (lo/mid ns) |
+| [5d] β jen ve large-|pre60| tercině | β=+0,069 **p=0,0003** (small/med ns) | β=+0,047 **p=0,006** |
+| [6] β 2024–25 | **β=+0,110 p=1e-8 R²=6,5 %** | β=+0,071 p=0,0002 R²=3,2 % |
+
+**Size-conditioned expectancy (net po nákladech 1,2 bps):**
+
+| bucket |pre60| | SPY winrate / net_cons | ES winrate / net_cons |
+|---|---|---|
+| small (avg 12 bps) | 47,9 % / −0,77 | 47,3 % / −0,32 |
+| med (42 bps) | 54,2 % / −0,30 | 53,5 % / −0,49 |
+| **large (113 bps)** | **57,6 % / +4,34** | **54,7 % / +2,90** |
+| large & 2021–23 | 58,8 % / +5,03 | 56,3 % / +4,02 |
+| large & 2024–25 | 54,5 % / +2,65 | 50,9 % / +0,11 |
+
+**Zjištění Krok 1 — PASS (proti Projektu 2):**
+1. **Signed β>0 signifikantní a PŘEŽIJE vol-normalizaci** (5a: p<0,01 obojí) → není to jen vol-clustering. Skutečný směrový vztah.
+2. **Efekt je koncentrovaný na velké pohyby / high-vol** (5c, 5d: β sig jen v hi bucketech) — **přesně jak flow predikuje** (flow ∝ r).
+3. **Na large-move dnech kladná cost-adj expectancy** (SPY +4,34 bps, ES +2,90 bps), a to i recentně (SPY +2,65; ES +0,11 marginální).
+4. **⚠️ Reversal Projektu 2:** size-weighted β dokonce ROSTE v čase (2021 0,02 → 2024–25 0,11), zatímco Projekt 2 viděl pokles agree60. Vysvětlení: agree60 (nevážený sign-count) ředí efekt spoustou malých no-flow dní; β (size-weighted) chytá právě big-flow dny. **To znovuotevírá AUM hypotézu v její SPRÁVNÉ (signed×size) formě.**
+5. **Caveaty:** (a) mechanismus zatím NEODLIŠEN od obecného „intraday momentum silnější na velkých dnech" (literatura) — to rozliší až Krok 2 (AUM vážení); (b) β_2024-25 R²6,5 % může být tažené pár extrémními dny (2025 vol spikes) — fragilní; (c) large-move = ~1/3 dní, in-sample, theory-driven conditioning (ne cherry-pick, mechanismus to předpovídá).
