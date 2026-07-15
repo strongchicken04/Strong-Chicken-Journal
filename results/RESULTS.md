@@ -561,3 +561,25 @@ Vstup i flip vyžadují close ZA VWAP±b; jinak pravidla beze změny. 2018-01-02
 **Vol-targeting 15 % = free lunch:** stejné CAGR, poloviční MDD (22,5→12,2 %), Sharpe 0,59→0,74, éra1 mírně lepší. Plateau 10–15 % robustní. Denní loss-limit vyžaduje intradenní path (další běh) — lokálně neaproximováno.
 
 **Kandidátní finální konfigurace pro R3 (one-shot OOS):** NQ, VWAP trend + hysterezní pásmo 20 bps, vol-target 15 % (cap 1×), costs 0,4/1,2 bps. IS: net_cons CAGR +9,6 %, Sharpe 0,74, MDD 12,2 %, ~2,5 obchodu/den, kladné v obou érách.
+
+## R3 — jednorázová OOS validace (frozen spec potvrzena; JEDEN běh)
+
+⚠️ **Platformní zkrácení okna:** QC free tier má mapping kontinuálního NQ jen do 2026-04-16 → backtest pokryl **140 ze ~197 obchodních dní** OOS (2025-10-02→2026-04-17, 71 %). Nezaviněno volbou parametrů; pravidlo běželo přesně dle frozen spec. BacktestId 0f336a6d.
+
+| scénář (frozen pipeline) | total za 140 dní | Sharpe (ann.) | MDD | IS implikace za 140 dní |
+|---|---|---|---|---|
+| GROSS plná pozice | +1,87 % | +0,31 | 9,0 % | (IS gross +18,4 % p.a. → ~+9,7 %) |
+| net_opt + VT15 | +1,11 % | +0,21 | 8,9 % | — |
+| **net_cons + VT15 (PRIMÁRNÍ)** | **−1,33 %** | −0,11 | 9,9 % | ~+5,2 % |
+
+Obchody: 324 (2,32/den — sedí na IS 2,5), hit 35,8 % (IS 36,9 % — struktura drží).
+
+**VERDIKT (předregistrované kritérium): NEJEDNOZNAČNÉ.** Primární metrika −1,33 % je v zóně (−5 %, 0): není to „podpořeno" (vyžadovalo >0) ani „nepodpořeno" (vyžadovalo <−5 % nebo záporný gross — gross je +1,87 %). Přesně dle spec: interpretuje se TAKTO a ne silněji.
+
+**Poctivé čtení bodových odhadů (bez statistické váhy, t≈±0,1):**
+1. Gross edge OOS (+3,4 % p.a. ekviv.) je výrazně pod IS gross (+18,4 % p.a.) — bodový odhad směřuje ke slabšímu edge, ale 140 dní Sharpe~1 strategie má obří rozptyl; nelze odlišit od šumu.
+2. Výsledek osciluje kolem nákladového předpokladu: net_opt kladný, net_cons záporný — strategie na tomhle okně žila v pásmu svých nákladů.
+3. Mechanika drží (frekvence i hit ratio sedí na IS) — selhání není implementační.
+4. Dle poznámky uživatele: i „podpořeno" by tu mělo malou důkazní sílu; „nejednoznačné" má ještě menší.
+
+**Protokol:** jeden běh, žádné iterování, spec potvrzena předem. Okno 2025-10→2026-04 se považuje za SPOTŘEBOVANÉ i pro tuto rodinu. Segment 2026-04-17→07-11 zůstal nevyhodnocen kvůli platformnímu limitu dat (viz text) — případné doplnění by vyžadovalo změnu datového přístupu a rozhodnutí uživatele; default = uzavřeno jako nejednoznačné.
