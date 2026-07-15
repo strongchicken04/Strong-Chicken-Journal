@@ -523,3 +523,15 @@ ES: RTH-only VWAP (vědomé rozhodnutí), kontinuální kontrakt, notional 1× N
 Kontext: QQQ (R1) s realistickými costs: net_opt +19,4 % (Sharpe 1,07), net_cons −14,0 %.
 
 **Verdikt R2: strategie se na SPY/ES NEPŘEKLÁDÁ** — gross pod B&H, net záporné při všech realistických nákladech. Edge je QQQ/NDX-specifický a extrémně cost-sensitivní. Backtest e5319635, detail `results/vwap_r2.csv`. **Konec fáze — čeká se na rozhodnutí o R3.**
+
+## R4a — NQ baseline + anatomie P&L (2018-01-02→2025-09-30)
+
+**NQ baseline (16,2 obchodů/den, hit 17,5 %, G:L 5,4):** GROSS CAGR **+36,1 %** (Sharpe 1,88, MDD 11,1 %) → NDX edge na futures POTVRZEN (QQQ ekvivalent 40,6 %). net_opt (0,4): +15,1 %/0,88; net_cons (1,2): **−17,8 %** → baseline na konzervativních nákladech mrtvá; redukce obchodů nutná.
+
+**Anatomie (éra0=2018–21 / éra1=2022–25, gross):**
+- **Délka držení (klíč):** obchody <15 min (~77 % všech) = kumulativně **−695 %/−766 %**; obchody ≥30 min = **+846 %/+865 %**. Whipsawy identifikovány u zdroje.
+- **Koncentrace:** top 1 % obchodů = +339/+346 % vs total +159/+95 % → **99 % obchodů má záporný součet**; edge = vzácné dlouhé trendy. Filtr nesmí zmeškat trendové vstupy.
+- **Hodina vstupu:** všechny hodiny gross kladné (ráno ~1,1 bps/obchod, midday ~0,6) → hodinový filtr je slabý nástroj.
+- **Pořadí v dni:** i 10.+ obchod dne kladný součet (+71/+40 %) → tvrdý cap obchodů/den by odřízl významný kus gross → špatný nástroj.
+
+**Závěr:** jediný filtr, který anatomie podporuje, je **konfirmační/hysterezní pásmo kolem VWAP** (zabíjí <15min whipsawy u zdroje, nechává trendové vstupy). Hodinové filtry a trade capy data nepodporují — vyřazeny. Backtest c707bbc8.

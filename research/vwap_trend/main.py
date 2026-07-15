@@ -3,65 +3,52 @@ from AlgorithmImports import *
 # endregion
 
 # =====================================================================
-# PROJEKT 3 — R4a: NQ baseline + ANATOMIE P&L.
-# Přesná VWAP trend pravidla (viz R1/R2, beze změny), NQ kontinuální
-# kontrakt, RTH-only VWAP 9:30-16:00 ET (vědomé ukotvení jako ES),
-# notional 1x NAV, GROSS (costs 0,4/1,2 bps lokálně).
-# Okno 2018-01-02 -> 2025-09-30 (vyhrazené okno NEDOTČENO).
-#
-# Export navíc: agregáty "kde bydlí edge":
-#  ###HOUR### éra × hodina vstupu   (n, wins, sum_pnl_pct)
-#  ###IDX###  éra × pořadí obchodu v dni (1..9, 10+)
-#  ###DUR###  éra × délka držení (<5, 5-15, 15-30, 30-60, 60+ min)
-#  ###CONC### éra: koncentrace gross P&L (top 1/5/10 % obchodů)
-# Éra 0 = 2018-2021, éra 1 = 2022-2025 (stabilita napříč režimy).
+# PROJEKT 3 — R4b: konfirmační (hysterezní) pásmo kolem VWAP, NQ.
+# PŘEDREGISTROVANÝ grid: b ∈ {2.5, 5, 10, 20} bps ceny. 4 paralelní simy
+# v jednom běhu na identických datech. Pravidla jinak BEZE ZMĚNY:
+#  - signál (vstup i flip) vyžaduje close ZA pásmem: close > vwap*(1+b)
+#    pro long, close < vwap*(1-b) pro short (hystereze; pouhý návrat
+#    k VWAP flip nespouští)
+#  - první vstup dne: první bar (od 9:31), jehož close je za pásmem
+#  - EOD flat 16:00; 100% kapitálu; gross (costs lokálně)
+# Okno 2018-01-02→2025-09-30. Export: nav+trd série per band (8 sérií).
+# Metrika úspěchu (předregistrováno): net_cons CAGR/Sharpe, plateau>peak,
+# kladný net_opt v OBOU érách, výrazně nižší trades/den.
 # =====================================================================
 
 OPEN_BAR_MIN = 9 * 60 + 31
 CLOSE_MIN = 16 * 60
+BANDS_BPS = [2.5, 5.0, 10.0, 20.0]
 
 
 class Sim:
-    def __init__(self):
+    def __init__(self, band_bps):
+        self.b = band_bps / 1e4
         self.nav = 25000.0
         self.pos = 0
         self.entry = 0.0
         self.shares = 0.0
         self.pending = None
-        self.entry_min = 0
         self.trades = 0
         self.wins = 0
         self.sum_win = 0.0
         self.sum_loss = 0.0
         self.trades_today = 0
-        # anatomie
-        self.hour = {}    # (era, hour) -> [n, w, sum_pnl]
-        self.idx = {}     # (era, idx_bucket) -> [n, w, sum]
-        self.dur = {}     # (era, dur_bucket) -> [n, w, sum]
-        self.pnls = {0: [], 1: []}
 
-    def _agg(self, d, key, ret):
-        a = d.setdefault(key, [0, 0, 0.0])
-        a[0] += 1
-        if ret > 0:
-            a[1] += 1
-        a[2] += ret
-
-    def fill_open(self, price, minutes):
+    def fill_open(self, price):
         if self.pending is None:
             return
         tgt = self.pending
         self.pending = None
         if self.pos != 0:
-            self.close_at(price, minutes, era=self._era)
+            self.close_at(price)
         if tgt != 0 and price > 0:
             self.pos = tgt
             self.entry = price
             self.shares = self.nav / price
-            self.entry_min = minutes
             self.trades_today += 1
 
-    def close_at(self, price, minutes, era):
+    def close_at(self, price):
         if self.pos == 0:
             return
         pnl = self.pos * (price - self.entry) * self.shares
@@ -73,21 +60,25 @@ class Sim:
             self.sum_win += ret
         else:
             self.sum_loss += -ret
-        # anatomie
-        h = min(max(self.entry_min // 60, 9), 15)
-        ib = self.trades_today if self.trades_today < 10 else 10
-        dmin = minutes - self.entry_min
-        db = 0 if dmin < 5 else (1 if dmin < 15 else (2 if dmin < 30 else (3 if dmin < 60 else 4)))
-        self._agg(self.hour, (era, h), ret)
-        self._agg(self.idx, (era, ib), ret)
-        self._agg(self.dur, (era, db), ret)
-        self.pnls[era].append(ret)
         self.pos = 0
         self.entry = 0.0
         self.shares = 0.0
 
+    def signal(self, close, vwap):
+        up = vwap * (1 + self.b)
+        dn = vwap * (1 - self.b)
+        if self.pos == 0:
+            if close > up:
+                self.pending = 1
+            elif close < dn:
+                self.pending = -1
+        elif self.pos > 0 and close < dn:
+            self.pending = -1
+        elif self.pos < 0 and close > up:
+            self.pending = 1
 
-class VWAPTrendNQ(QCAlgorithm):
+
+class VWAPTrendR4b(QCAlgorithm):
 
     def initialize(self):
         self.set_start_date(2018, 1, 2)
@@ -101,34 +92,29 @@ class VWAPTrendNQ(QCAlgorithm):
             contract_depth_offset=0, extended_market_hours=False)
         fut.set_filter(0, 182)
         self.sym = fut.symbol
-        self.sim = Sim()
+        self.sims = {b: Sim(b) for b in BANDS_BPS}
         self.cur_date = None
         self.cum_pv = 0.0
         self.cum_v = 0.0
         self.last_close = None
 
-    @property
-    def era(self):
-        return 0 if self.time.year <= 2021 else 1
-
     def on_data(self, data: Slice):
         if self.sym not in data.bars:
             return
         bar = data.bars[self.sym]
-        sim = self.sim
-        sim._era = self.era
         t = self.time
         minutes = t.hour * 60 + t.minute
         d = t.date()
 
         if self.cur_date != d:
             if self.cur_date is not None:
-                sim.pending = None
-                if sim.pos != 0 and self.last_close:
-                    sim.close_at(self.last_close, CLOSE_MIN, era=sim._era)
-                self.plot("nav", "NQ_nav", sim.nav)
-                self.plot("nav", "NQ_trd", sim.trades_today)
-                sim.trades_today = 0
+                for b, sim in self.sims.items():
+                    sim.pending = None
+                    if sim.pos != 0 and self.last_close:
+                        sim.close_at(self.last_close)
+                    self.plot("nav", f"b{b}_nav", sim.nav)
+                    self.plot("nav", f"b{b}_trd", sim.trades_today)
+                    sim.trades_today = 0
             self.cur_date = d
             self.cum_pv = 0.0
             self.cum_v = 0.0
@@ -137,7 +123,8 @@ class VWAPTrendNQ(QCAlgorithm):
         if not (OPEN_BAR_MIN <= minutes <= CLOSE_MIN):
             return
 
-        sim.fill_open(bar.open, minutes)
+        for sim in self.sims.values():
+            sim.fill_open(bar.open)
 
         v = float(bar.volume)
         if v > 0:
@@ -147,51 +134,28 @@ class VWAPTrendNQ(QCAlgorithm):
         if self.cum_v <= 0:
             return
         vwap = self.cum_pv / self.cum_v
-        c = bar.close
 
-        if minutes == OPEN_BAR_MIN:
-            if c > vwap:
-                sim.pending = 1
-            elif c < vwap:
-                sim.pending = -1
-        elif sim.pos > 0 and c < vwap:
-            sim.pending = -1
-        elif sim.pos < 0 and c > vwap:
-            sim.pending = 1
-
-        if minutes == CLOSE_MIN:
-            sim.pending = None
-            if sim.pos != 0:
-                sim.close_at(bar.close, minutes, era=sim._era)
+        if minutes < CLOSE_MIN:
+            for sim in self.sims.values():
+                sim.signal(bar.close, vwap)
+        else:
+            for sim in self.sims.values():
+                sim.pending = None
+                if sim.pos != 0:
+                    sim.close_at(bar.close)
 
     def on_end_of_algorithm(self):
-        sim = self.sim
-        sim.pending = None
-        if sim.pos != 0 and self.last_close:
-            sim.close_at(self.last_close, CLOSE_MIN, era=1)
-        self.plot("nav", "NQ_nav", sim.nav)
-        self.plot("nav", "NQ_trd", sim.trades_today)
-        losses = sim.trades - sim.wins
-        self.set_runtime_statistic("NQ_trades", str(sim.trades))
-        self.set_runtime_statistic("NQ_wins", str(sim.wins))
-        self.set_runtime_statistic("NQ_final_nav", f"{sim.nav:.2f}")
-        aw = (sim.sum_win / sim.wins) if sim.wins else 0.0
-        al = (sim.sum_loss / losses) if losses else 0.0
-        self.set_runtime_statistic("NQ_avg_win_pct", f"{100*aw:.4f}")
-        self.set_runtime_statistic("NQ_avg_loss_pct", f"{100*al:.4f}")
-        for (era, h), a in sorted(sim.hour.items()):
-            self.log(f"###HOUR### era={era} h={h} n={a[0]} w={a[1]} sum={100*a[2]:.3f}")
-        for (era, ib), a in sorted(sim.idx.items()):
-            self.log(f"###IDX### era={era} i={ib} n={a[0]} w={a[1]} sum={100*a[2]:.3f}")
-        for (era, db), a in sorted(sim.dur.items()):
-            self.log(f"###DUR### era={era} d={db} n={a[0]} w={a[1]} sum={100*a[2]:.3f}")
-        for era in (0, 1):
-            p = sorted(sim.pnls[era], reverse=True)
-            n = len(p)
-            if n:
-                tot = sum(p)
-                t1 = sum(p[:max(1, n // 100)])
-                t5 = sum(p[:max(1, n // 20)])
-                t10 = sum(p[:max(1, n // 10)])
-                self.log(f"###CONC### era={era} n={n} total={100*tot:.2f} "
-                         f"top1={100*t1:.2f} top5={100*t5:.2f} top10={100*t10:.2f}")
+        for b, sim in self.sims.items():
+            sim.pending = None
+            if sim.pos != 0 and self.last_close:
+                sim.close_at(self.last_close)
+            self.plot("nav", f"b{b}_nav", sim.nav)
+            self.plot("nav", f"b{b}_trd", sim.trades_today)
+            losses = sim.trades - sim.wins
+            aw = (sim.sum_win / sim.wins) if sim.wins else 0.0
+            al = (sim.sum_loss / losses) if losses else 0.0
+            self.set_runtime_statistic(f"b{b}_trades", str(sim.trades))
+            self.set_runtime_statistic(f"b{b}_wins", str(sim.wins))
+            self.set_runtime_statistic(f"b{b}_final_nav", f"{sim.nav:.2f}")
+            self.log(f"###R4B### b={b} trades={sim.trades} wins={sim.wins} "
+                     f"final_nav={sim.nav:.2f} avg_win={100*aw:.4f}% avg_loss={100*al:.4f}%")
