@@ -535,3 +535,29 @@ Kontext: QQQ (R1) s realistickými costs: net_opt +19,4 % (Sharpe 1,07), net_con
 - **Pořadí v dni:** i 10.+ obchod dne kladný součet (+71/+40 %) → tvrdý cap obchodů/den by odřízl významný kus gross → špatný nástroj.
 
 **Závěr:** jediný filtr, který anatomie podporuje, je **konfirmační/hysterezní pásmo kolem VWAP** (zabíjí <15min whipsawy u zdroje, nechává trendové vstupy). Hodinové filtry a trade capy data nepodporují — vyřazeny. Backtest c707bbc8.
+
+## R4b — hysterezní pásmo kolem VWAP (NQ, předregistrovaný grid b ∈ {2,5/5/10/20} bps)
+
+Vstup i flip vyžadují close ZA VWAP±b; jinak pravidla beze změny. 2018-01-02→2025-09-30.
+
+| band | tr/den | hit | GROSS CAGR/Sharpe | net_opt | net_cons CAGR/Sharpe/MDD | net_cons éra0/éra1 |
+|---|---|---|---|---|---|---|
+| 0 (baseline) | 16,2 | 17,5 % | +36,1 %/1,88 | +15,1 %/0,88 | **−17,8 %**/−0,96/80 % | — |
+| 2,5 | 9,4 | 22,1 % | +28,9 %/1,56 | +16,9 %/0,98 | −3,8 %/−0,13/51 % | +3,8/−11,1 |
+| 5 | 6,7 | 25,2 % | +22,3 %/1,22 | +14,0 %/0,82 | −0,9 %/+0,04/43 % | +5,2/−7,0 |
+| 10 | 4,4 | 29,8 % | +20,1 %/1,12 | +14,8 %/0,86 | +4,9 %/+0,35/24 % | +9,8/−0,3 |
+| **20** | **2,5** | **36,9 %** | +18,4 %/1,04 | +15,4 %/0,89 | **+9,5 %/+0,59/22,5 %** | **+13,3/+5,1** |
+
+**Zjištění:** (1) net_opt je PLOCHÉ napříč gridem (~14–17 %) — pásmo mění gross edge za úsporu nákladů ~1:1; (2) net_cons monotónně roste s pásmem: −17,8 % → **+9,5 %**; (3) b=20: 2,5 obchodu/den (−85 % vs baseline), kladné v OBOU érách (předregistrované kritérium ✓); (4) b=10–20 tvoří plateau; b=20 je hrana gridu — trend je monotónní, ale grid se post-hoc NErozšiřuje (pre-registrace); (5) éra1 slabší než éra0 všude (edge v čase slábne) — poctivě flagováno.
+
+## R4c — sizing (lokálně, na b=20 net_cons řadě)
+
+| sizing | CAGR | vol | Sharpe | MDD | éra0/éra1 |
+|---|---|---|---|---|---|
+| plná pozice | +9,5 % | 17,5 % | 0,59 | 22,5 % | +13,3/+5,1 |
+| **vol-target 15 % (EWMA20, cap 1×)** | **+9,6 %** | 13,2 % | **0,74** | **12,2 %** | +12,6/+6,0 |
+| vol-target 10–12 % | +8,1–8,8 % | 10–12 % | 0,78–0,80 | 9,6–11,1 % | ~+10/+6 |
+
+**Vol-targeting 15 % = free lunch:** stejné CAGR, poloviční MDD (22,5→12,2 %), Sharpe 0,59→0,74, éra1 mírně lepší. Plateau 10–15 % robustní. Denní loss-limit vyžaduje intradenní path (další běh) — lokálně neaproximováno.
+
+**Kandidátní finální konfigurace pro R3 (one-shot OOS):** NQ, VWAP trend + hysterezní pásmo 20 bps, vol-target 15 % (cap 1×), costs 0,4/1,2 bps. IS: net_cons CAGR +9,6 %, Sharpe 0,74, MDD 12,2 %, ~2,5 obchodu/den, kladné v obou érách.
