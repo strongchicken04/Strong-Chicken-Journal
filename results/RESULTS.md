@@ -583,3 +583,8 @@ Obchody: 324 (2,32/den — sedí na IS 2,5), hit 35,8 % (IS 36,9 % — struktura
 4. Dle poznámky uživatele: i „podpořeno" by tu mělo malou důkazní sílu; „nejednoznačné" má ještě menší.
 
 **Protokol:** jeden běh, žádné iterování, spec potvrzena předem. Okno 2025-10→2026-04 se považuje za SPOTŘEBOVANÉ i pro tuto rodinu. Segment 2026-04-17→07-11 zůstal nevyhodnocen kvůli platformnímu limitu dat (viz text) — případné doplnění by vyžadovalo změnu datového přístupu a rozhodnutí uživatele; default = uzavřeno jako nejednoznačné.
+
+
+## Diagnostika D1 (Projekt 3) — shrnutí
+
+Rok-po-roce dekompozice Raw / +pásmo / +VT na NQ (tabulka v PLAYBOOK_vwap_trend.md, data results/vwap_d1.csv, backtest 567b6895). Klíč: corr(raw edge, čas)=−0,44; corr(raw edge, vol)=+0,62 (n=8). Pásmo přispívá stabilně (+12 až +46 pp/rok, cost-mitigation nedegraduje); VT plní de-risk roli ve vysokovol letech. 2025+OOS segment dodávají edge hluboko pod vol-implikovanou úroveň (2025: vol 21,4 % ale edge +5,1 % vs 2018: vol 20,1 % → +49 %) → obraz = vol-režimová báze + od 2025 dodatečný pokles nevysvětlený volatilitou; 8–9 bodů nerozhodne. Metrika ke sledování dál: edge/vol ratio.
