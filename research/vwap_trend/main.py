@@ -20,7 +20,7 @@ from AlgorithmImports import *
 # runtime stats: trades/wins/sum_win/sum_loss per ticker.
 # =====================================================================
 
-MODE = "R1"   # "R1" | "R2"
+MODE = "R2"   # "R1" | "R2"
 
 OPEN_BAR_MIN = 9 * 60 + 31    # 571 = end-time prvního RTH baru (9:30->9:31)
 CLOSE_MIN = 16 * 60           # 960

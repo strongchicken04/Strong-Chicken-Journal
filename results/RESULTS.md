@@ -486,3 +486,25 @@ Frozen spec potvrzena uživatelem před během (phase_e_frozen_spec.md). Jediný
 | E OOS large-move momentum | OOS 2025-10→2026-07 | 46 | 43,5 % | [30,2 %, 57,8 %] | −0,85 bps | **−2,05 bps** | **NEPODPOŘENO** (IS ref: 57,4 %, +4,30 net) |
 
 Opačné znaménko vůči IS, jasně záporná net expectancy → předregistrované „Nepodpořeno". CI zahrnuje 50 % → selhání replikace, ne prokázaná reverze. **OOS okno tímto SPOTŘEBOVÁNO** (jediný povolený pohled proběhl; žádné další testy na tomto okně nejsou validní).
+
+---
+---
+
+# PROJEKT 3 — VWAP Trend Trading (Zarattini/Aziz SSRN 4631351)
+
+Nová signálová rodina: trend-following od VWAP. R1 replikace + R2 překlad SPY/ES.
+
+## R1 — replikace (QQQ/TQQQ, 2018-01-02→2023-09-28, paper costs $0,0005/share, no slippage)
+
+| metrika | QQQ moje | QQQ paper | TQQQ moje | TQQQ paper |
+|---|---|---|---|---|
+| total return | 611,6 % | 671 % | 1 484 % | 8 242 % |
+| CAGR | 40,8 % | 43 % | 61,9 % | 116 % |
+| vol ann. | 17,7 % | 18 % | 52,9 % | 54 % |
+| Sharpe | 2,0 | 2,1 | 1,2 | 1,7 |
+| MDD | 8,8 % | 9,4 % | 40,9 % | 36,1 % |
+| hit ratio | 17,4 % | ~17 % | 18,1 % | ~17 % |
+| gain:loss | 5,5 | ~5,7 | 5,2 | ~5,5 |
+| trades | 23 360 | ~21 967 | 23 504 | ~22 399 |
+
+**Verdikt R1: PASS.** QQQ replikováno prakticky přesně (vše v toleranci zdroje dat). TQQQ: per-trade struktura (vol/hit/G:L/trades) replikována; kompounding gap = 0,71 bps/obchod, kvantitativně vysvětlen fee-per-share na split-adjusted cenách (QC adjusted $8–40 → 0,25–1,25 bps/RT vs paper unadjusted $40–90 → 0,1–0,25) — datový artefakt, ne chyba pravidel. Backtest c6bd24a4, projekt 34170904.
