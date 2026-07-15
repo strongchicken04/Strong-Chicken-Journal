@@ -2,7 +2,7 @@
 
 **Navazuje na:** `PLAYBOOK_levetf.md` (Projekt 2 — AUM hypotéza falzifikována v „agree-rate × čas" formě).
 **Přeformulace:** mechanismus predikuje `Flow ≈ AUM × L(L−1) × r` — tedy **signed, velikostně-škálující** vztah mezi returnem dne do cutoffu a returnem poslední hodiny; Projekt 2 testoval AUM/čas izolovaně, což mechanismus nepredikuje.
-**In-sample:** 2021-01-01 → 2025-09-30 (SPY primární, ES sekundární). **OOS (2025-10-01 → 2026-07-11): v době psaní tohoto dokumentu NEDOTČENO.**
+**In-sample:** 2021-01-01 → 2025-09-30 (SPY primární, ES sekundární). **OOS (2025-10-01 → 2026-07-11): SPOTŘEBOVÁNO jediným během Fáze E (viz §8) — verdikt NEPODPOŘENO.**
 
 ---
 
@@ -10,7 +10,7 @@
 
 > **Flow-atribuce: NEPODLOŽENÁ (uzavřeno).** Signed momentum vztah `last60 ~ pre60` je reálný, přežije vol-kontrolu a koncentruje se na velké pohyby — což je s flow mechanismem *konzistentní* — ale (a) **timing jde proti**: efekt je silnější 15:00–15:30 a slábne ke close (mechanický EOD rebalance by měl ke close zesilovat), (b) **AUM vážení nešlo čistě otestovat**: historická AUM/shares data nejsou volně dostupná a AUM růst je ~monotónní s časem, tedy neoddělitelný od časového trendu, který už Projekt 2 zamítl. Per konzervativní bias se flow-specifická atribuce netvrdí.
 >
-> **Vedlejší reálný nález (in-sample):** size-weighted momentum na velko-pohybových dnech — β sig. po vol-normalizaci, cost-adjusted expectancy **+4,3 bps net** na large-move dnech (SPY), kladná i v recentním období. Tento nález NEZÁVISÍ na flow vysvětlení a je kandidát na jednorázovou OOS validaci (Fáze E).
+> **Vedlejší nález (in-sample):** size-weighted momentum na velko-pohybových dnech — β sig. po vol-normalizaci, cost-adjusted expectancy **+4,3 bps net** na large-move dnech (SPY). **Fáze E (jednorázová OOS validace, frozen spec): NEPODPOŘENO** — OOS win rate 43,5 %, net expectancy −2,05 bps, opačné znaménko než IS. In-sample edge se na čistém vzorku nereplikoval (viz §8).
 
 ---
 
@@ -64,3 +64,26 @@ Efekt **slábne ke close** → proti mechanickému „rebalance u close"; sluči
 ## 7. Reprodukovatelnost
 
 Log: `results/RESULTS.md` (sekce PROJEKT 2b). Kód: `research/levetf_phase2b/step1.py`. Data: `data/cache/eod_{spy,es}.csv`. AUM snapshot probe: chat log 2026-07-14.
+
+
+---
+
+## 8. FÁZE E — jednorázová OOS validace (POSLEDNÍ SLOVO)
+
+**Protokol:** specifikace zamrazena PŘED pohledem na outcome (`phase_e_frozen_spec.md`), výslovně potvrzena uživatelem, aplikována mechanicky, **přesně jeden běh** (backtestId `ab5b1bc1d2dea28bafacc60674b0ddab`). N=46 spočítáno předem outcome-blind extrakcí (bez čtení 16:00).
+
+**Zamrazené pravidlo:** SPY; den s |r(9:30→15:00)| ≥ 62,1987 bps (IS 2/3 kvantil, fixní) → vstup 15:00 ve směru sign(r_pre60), konstantní 1 jednotka, exit 16:00 close; costs 0,4/1,2 bps.
+
+| metrika | OOS | IS reference |
+|---|---|---|
+| N | 46 (ze 134 dní; 34 % ≈ IS tercil) | 390 |
+| win rate | **43,5 %** [30,2; 57,8] | 57,4 % |
+| gross expectancy | **−0,85 bps** | +5,50 |
+| net (cons −1,2) | **−2,05 bps** | +4,30 |
+| per-trade Sharpe | −0,03 | — |
+
+**VERDIKT (dle předregistrovaného kritéria): NEPODPOŘENO.** Point estimate má opačné znaménko než IS a net expectancy je jasně záporná. Wilson CI je široké a zahrnuje 50 % → nejde o prokázanou reverzi, ale o **selhání replikace**: in-sample edge (+4,3 bps net, n=390, p=3e-4) se na jediném čistém vzorku neobjevil. Nejpravděpodobnější čtení: IS nález byl overfitting/režimová specifika (high-vol 2021–23) — konzistentní s tím, že β bylo tažené právě těmi režimy.
+
+**Metodická lekce (finální):** in-sample signifikance s p=3e-4 na n=390 nepřežila první kontakt s čistými daty. Přesně proto existuje frozen-spec + jednorázový OOS protokol; bez něj by následovalo „doladění prahu" a falešná strategie. **OOS okno je spotřebované — žádné další testy na 2025-10→2026-07 nejsou validní.**
+
+**Finální doporučení (jedna věta):** Celou rodinu EOD/intraday-momentum a mean-reversion setupů na SPY/ES z Projektů 1–2b uzavřít jako netradeable; případný další výzkum vést na jiné třídě signálu a s novým, budoucím OOS obdobím.

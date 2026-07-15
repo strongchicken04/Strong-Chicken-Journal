@@ -475,3 +475,14 @@ Flow predikuje koncentraci efektu BLÍŽ ke close (rebalance jede v posl. minut�
 - **Proti** mechanickému flow „executuje se u close" (ten by měl ke close zesilovat).
 - **Možná konzistentní** s tím, že trh flow ANTICIPUJE/front-runuje (pohyb se odehraje dřív, v očekávání známého EOD flow).
 → Nejednoznačné pro flow-specificitu; přímý arbitr je až Krok 2 (AUM vážení).
+
+
+## FÁZE E — jednorázová OOS validace (Projekt 2b) — VÝSLEDEK
+
+Frozen spec potvrzena uživatelem před během (phase_e_frozen_spec.md). Jediný běh, backtestId ab5b1bc1d2dea28bafacc60674b0ddab.
+
+| fáze/test | podskupina | n | win rate | 95% CI (Wilson) | gross exp | net_cons | verdikt |
+|---|---|---|---|---|---|---|---|
+| E OOS large-move momentum | OOS 2025-10→2026-07 | 46 | 43,5 % | [30,2 %, 57,8 %] | −0,85 bps | **−2,05 bps** | **NEPODPOŘENO** (IS ref: 57,4 %, +4,30 net) |
+
+Opačné znaménko vůči IS, jasně záporná net expectancy → předregistrované „Nepodpořeno". CI zahrnuje 50 % → selhání replikace, ne prokázaná reverze. **OOS okno tímto SPOTŘEBOVÁNO** (jediný povolený pohled proběhl; žádné další testy na tomto okně nejsou validní).

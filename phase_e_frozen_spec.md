@@ -57,3 +57,23 @@ Pro každý OOS obchodní den:
 - Reportuje: win rate + Wilson CI, gross/net expectancy, per-trade Sharpe (mean/std), směrová konzistence s IS.
 - **Žádné iterování.** Ať výsledek vyjde jakkoliv, je to odpověď — ne signál měnit práh/okno/cokoliv a spouštět znovu.
 - Outcome OOS okna se po Kroku 1 považuje za spotřebovaný.
+
+---
+
+## ✅ KROK 1 — VÝSLEDEK (jediný běh na OOS, spec byla zamrazená a předem potvrzená)
+
+Projekt `research/levetf_phaseE`, backtestId `ab5b1bc1d2dea28bafacc60674b0ddab`.
+
+| metrika | OOS (2025-10-01→2026-07-11) | in-sample reference |
+|---|---|---|
+| N obchodů | 46 | 390 |
+| win rate | **43,5 %** (20/46), Wilson95 [30,2 %, 57,8 %] | 57,4 % |
+| gross expectancy | **−0,85 bps/obchod** | +5,50 |
+| net_cons (−1,2) | **−2,05 bps/obchod** | +4,30 |
+| net_opt (−0,4) | −1,25 bps/obchod | +5,10 |
+| per-trade Sharpe | −0,03 | — |
+| sum P&L (gross) | −39,1 bps / 46 obchodů | — |
+
+**VERDIKT: NEPODPOŘENO.** Opačné znaménko než in-sample (IS momentum +, OOS reverze/nula), jasně záporná net expectancy → splňuje předregistrované „Nepodpořeno". Wilson CI [30,2; 57,8] je široké (N=46) a zahrnuje 50 %, takže to NENÍ statisticky rozhodná reverze — je to **selhání replikace**: efekt se v OOS neobjevil, point estimate obrátil na záporný. Nejpravděpodobnější čtení: in-sample size-weighted edge byl z podstatné části overfitting / režimově specifický (nejsilnější v high-vol 2021–23), který na čistém OOS vzorku nepřežil.
+
+**Protokol dodržen:** jediný běh, žádné iterování, spec zamrazená a potvrzená před během. Outcome OOS okna je tímto spotřebováno.
