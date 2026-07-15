@@ -3,37 +3,40 @@ from AlgorithmImports import *
 # endregion
 
 # =====================================================================
-# FÁZE E — KROK 0: outcome-BLIND počítání N (velko-pohybové dny v OOS).
-# ČTE JEN 9:30 open a 15:00 close (filtr velikosti pohybu do cutoffu).
-# NIKDY NEČTE 16:00 (outcome). Nesmí prozradit nic o last60.
-# OOS okno 2025-10-01 -> 2026-07-11. SPY. Frozen práh z in-sample.
+# FÁZE E — KROK 1: jednorázový OOS outcome test size-weighted momenta.
+# ZAMRAZENÁ specifikace (phase_e_frozen_spec.md), SCHVÁLENO uživatelem.
+# SPY, OOS 2025-10-01 -> 2026-07-11. Aplikuje se PŘESNĚ JEDNOU.
+#
+# Pravidlo: na dnech |r_pre60| >= 62.1987 bps vstup v 15:00 ve směru
+# sign(r_pre60), výstup 16:00 close, konstantní 1 jednotka.
+# P&L/obchod (bps) = sign(r_pre60) * r_last60.
 # =====================================================================
 
 RTH_OPEN_MIN = 9 * 60 + 30    # 570
-CUT60_MIN = 15 * 60           # 900 (15:00) = cutoff (day_return_to_cutoff konec)
-LARGE_THR_BPS = 62.1987       # FROZEN in-sample 2/3 kvantil |r_pre60| (SPY)
+CUT60_MIN = 15 * 60           # 900 (15:00)
+CLOSE_MIN = 16 * 60           # 960 (16:00)
+LARGE_THR_BPS = 62.1987       # FROZEN
 
 
-class LevETFPhaseE_Ncount(QCAlgorithm):
+class LevETFPhaseE_Step1(QCAlgorithm):
 
     def initialize(self):
-        self.set_start_date(2025, 10, 1)   # OOS start
-        self.set_end_date(2026, 7, 11)     # OOS end
+        self.set_start_date(2025, 10, 1)
+        self.set_end_date(2026, 7, 11)
         self.set_cash(100000)
         self.set_time_zone(TimeZones.NEW_YORK)
         sec = self.add_equity("SPY", Resolution.MINUTE,
                               data_normalization_mode=DataNormalizationMode.RAW)
         self.sym = sec.symbol
         self._reset_day(None)
-        self.n_days = 0        # obchodní dny s validním open+15:00
-        self.n_large = 0       # z toho velko-pohybové
-        self.large_dates = []
+        self.pnls = []        # per-trade P&L v bps (sign(r_pre60)*r_last60)
 
     def _reset_day(self, d):
         self.cur_date = d
         self.p_open = None
         self.p_cut = None
-        self.counted = False
+        self.r_pre60 = None
+        self.traded = False
 
     def on_data(self, data: Slice):
         if self.sym not in data.bars:
@@ -44,22 +47,25 @@ class LevETFPhaseE_Ncount(QCAlgorithm):
         d = t.date()
         if self.cur_date != d:
             self._reset_day(d)
-        # ČTEME POUZE do 15:00 vč. Po 15:00 den ignorujeme (žádné 16:00!).
         if minutes == RTH_OPEN_MIN + 1 and self.p_open is None:
             self.p_open = bar.open
         if minutes == CUT60_MIN and self.p_cut is None and self.p_open is not None:
             self.p_cut = bar.close
-            r_pre60 = (self.p_cut / self.p_open - 1) * 10000  # bps
-            self.n_days += 1
-            if abs(r_pre60) >= LARGE_THR_BPS and not self.counted:
-                self.n_large += 1
-                self.counted = True
-                self.large_dates.append(str(d))
-            # sign zámerně NELOGUJEME zde jako outcome; jen velikost rozhodla.
+            self.r_pre60 = (self.p_cut / self.p_open - 1) * 10000
+        if minutes == CLOSE_MIN and not self.traded and self.r_pre60 is not None:
+            # frozen pravidlo
+            if abs(self.r_pre60) >= LARGE_THR_BPS:
+                r_last60 = (bar.close / self.p_cut - 1) * 10000
+                pnl = (1.0 if self.r_pre60 > 0 else -1.0) * r_last60
+                self.pnls.append(round(pnl, 4))
+            self.traded = True
 
     def on_end_of_algorithm(self):
-        self.set_runtime_statistic("oos_trading_days", str(self.n_days))
-        self.set_runtime_statistic("N_large_move", str(self.n_large))
-        self.set_runtime_statistic("large_thr_bps", str(LARGE_THR_BPS))
-        self.log(f"###ENSUM### oos_days={self.n_days} N_large={self.n_large} thr_bps={LARGE_THR_BPS}")
-        self.log(f"###LARGEDATES### {','.join(self.large_dates)}")
+        n = len(self.pnls)
+        wins = sum(1 for p in self.pnls if p > 0)
+        gross = sum(self.pnls) / n if n else 0.0
+        self.set_runtime_statistic("N_trades", str(n))
+        self.set_runtime_statistic("wins", str(wins))
+        self.set_runtime_statistic("gross_exp_bps", f"{gross:.4f}")
+        self.log(f"###E1SUM### N={n} wins={wins} gross_exp_bps={gross:.4f}")
+        self.log(f"###E1PNL### {','.join(str(p) for p in self.pnls)}")
