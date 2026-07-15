@@ -508,3 +508,18 @@ Nová signálová rodina: trend-following od VWAP. R1 replikace + R2 překlad SP
 | trades | 23 360 | ~21 967 | 23 504 | ~22 399 |
 
 **Verdikt R1: PASS.** QQQ replikováno prakticky přesně (vše v toleranci zdroje dat). TQQQ: per-trade struktura (vol/hit/G:L/trades) replikována; kompounding gap = 0,71 bps/obchod, kvantitativně vysvětlen fee-per-share na split-adjusted cenách (QC adjusted $8–40 → 0,25–1,25 bps/RT vs paper unadjusted $40–90 → 0,1–0,25) — datový artefakt, ne chyba pravidel. Backtest c6bd24a4, projekt 34170904.
+
+## R2 — překlad SPY/ES s reálnými costs (2018-01-02→2025-09-30, vyhrazené okno nedotčeno)
+
+ES: RTH-only VWAP (vědomé rozhodnutí), kontinuální kontrakt, notional 1× NAV. Costs 0,4/1,2 bps RT lokálně. ~17,5 obchodů/den, hit 16–17 %, G:L 5,2–5,6.
+
+| scénář | SPY CAGR / Sharpe / MDD | ES CAGR / Sharpe / MDD |
+|---|---|---|
+| GROSS | +9,8 % / +0,76 / 16,0 % | +12,0 % / +0,91 / 15,9 % |
+| net_opt (0,4) | −8,0 % / −0,54 / 52,5 % | −6,1 % / −0,39 / 43,0 % |
+| net_cons (1,2) | −35,5 % / −2,91 / 96,7 % | −34,1 % / −2,78 / 96,1 % |
+| B&H benchmark | +14,3 % / +0,65 / 33,7 % | — |
+
+Kontext: QQQ (R1) s realistickými costs: net_opt +19,4 % (Sharpe 1,07), net_cons −14,0 %.
+
+**Verdikt R2: strategie se na SPY/ES NEPŘEKLÁDÁ** — gross pod B&H, net záporné při všech realistických nákladech. Edge je QQQ/NDX-specifický a extrémně cost-sensitivní. Backtest e5319635, detail `results/vwap_r2.csv`. **Konec fáze — čeká se na rozhodnutí o R3.**
