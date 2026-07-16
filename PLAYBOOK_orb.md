@@ -238,3 +238,28 @@ Overall: n=523, mean net R +0,037, t=0,69, p=0,49.
 ![regime](results/figures/orb_4b_regime.png)
 
 **Status:** Fáze 1 dává **slabý, ekonomicky smysluplný lead (ATR%)**, ne potvrzený conditioner. Další krok = time-stability ATR% (Fáze 3 předsazená jako gate). OOS nedotčeno.
+
+### Varianta 4b — Regime time-stability test (Fáze 3 předsazená jako gate) — NEGATIVNÍ
+
+Decisive test lead z Fáze 1 (ATR% monotónní edge): drží high-ATR edge ve dvou časových půlkách, nebo je to 2020? bt `2a2f2e0c7f8ac33817e66bb9ecf1cd23`.
+
+**ATR% edge ve dvou půlkách:**
+
+| ATR% režim | 2018–2021 (mean net R, n) | 2022–2025 (mean net R, n) |
+|---|---|---|
+| nízké | −0,072 (108) | −0,002 (93) |
+| střední | −0,013 (82) | **+0,124 (74)** |
+| **vysoké** | **+0,262 (62)** | **+0,007 (80)** |
+
+**ATR% "vysoké" po letech:** 2018 −5,6 · 2019 +3,8 · **2020 +14,4 (n=25)** · 2021 +3,6 · 2022 −0,7 · 2023 −1,1 · 2024 +0,5 · 2025 +1,8.
+
+**VERDIKT: conditioner NEPŘEŽIL — vol-efekt je artefakt 2020.**
+- High-ATR edge: **+0,262 v 1. půlce → +0,007 (nula) v 2. půlce.** Nereplikuje se.
+- Per-rok: high-ATR kladný výsledek dělá skoro celý **2020 (+14,4 z 25 obchodů)**. Bez 2020 je high-ATR bucket rozházená nula.
+- **Monotónnost z Fáze 1 se v 2. půlce rozpadla / obrátila** — v 2022–2025 je nejlepší „střední" ATR (+0,124), ne vysoké. RV stejně (high-vol edge +0,232 → +0,039). Žádný stabilní vztah edge↔volatilita.
+
+**Závěr:** „ORB funguje ve vysoké volatilitě" je na NQ 2018–2025 reálně **„ORB fungoval v březnu 2020"**. Není to stabilní režimový conditioner — je to jedna epizoda. **Regime-switching systém (detektor + 2–6 sub-strategií) tedy NEMÁ na čem stát**: premisa (stabilní vol conditioner) neexistuje; postavit ho by znamenalo fitovat detektor na 2020. Per předregistrovanou disciplínu se dál nestaví.
+
+![regime stability](results/figures/orb_4b_regime_stability.png)
+
+**Metodická hodnota:** přesně proto se dělá condition-first + time-stability PŘED stavěním systému. Outcome-first („co bylo na dobrých letech") by nás dovedlo ke krásnému 6-strategiovému systému nafitovanému na 2020, co by na OOS umřel. Test to zachytil za cenu dvou běhů, ne za cenu spotřebovaného OOS a reálného kapitálu. OOS nedotčeno.

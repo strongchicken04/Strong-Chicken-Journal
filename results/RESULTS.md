@@ -648,3 +648,7 @@ RR trend (avg mean-net-R přes s): m=1→−0,076, m=1.5→−0,067, m=2→−0,
 Spec orb_4b_frozen_assumptions.md. NQ extended hours, range 9:15-9:30, 1-min breakout, SL=opačná strana range, TP 1:1, filtry range%×RVOL×ATR (18 kombinací). QC 34193719, bt 28397134653b59965d07549cce9c720d. IS, OOS nedotčeno.
 
 VERDIKT: NEPODPOŘENO. 0/18 kombinací kladná. Baseline TP-of-decided 51,3% [49,1;53,5] = straddluje 50% breakeven (hod mincí), mean net R −0,042. Nejlepší RVOL≥1,2: −0,006 R (t=−0,13, p=0,89 = nula, pořád záporné), rozpadá se u RVOL≥1,5 (−0,098). ATR-pro-vol filtr neutrální/škodlivý. Island check: fragilní hřeben, ne stabilní ostrov (optimizer's curse). Konzistentní s MNQ falsifikační studií + Projekt 4 A/B/C. Detail: PLAYBOOK_orb.md sekce Varianta 4b.
+
+### PROJEKT 4b — regime time-stability (Fáze 3 gate) — NEGATIVNÍ
+
+bt 2a2f2e0c7f8ac33817e66bb9ecf1cd23. Test: drží high-ATR edge (lead z Fáze 1) ve dvou půlkách IS? ATR hi: 2018-2021 mean +0,262 (n=62) → 2022-2025 +0,007 (n=80). Per-rok: high-ATR kladné dělá skoro celý 2020 (+14,4/25 obchodů). Monotónnost se v 2. půlce rozpadla (nejlepší je "střední" ATR). RV stejně. VERDIKT: vol-conditioner NEPŘEŽIL = artefakt 2020, ne stabilní režim. Regime-switching systém nemá na čem stát → nestaví se (jinak fit na 2020). OOS nedotčeno. Detail: PLAYBOOK_orb.md.
