@@ -111,6 +111,7 @@ class Sim:
         self.n_ambig = 0; self.n_skip_news = 0
         self.sum_gross = 0.0; self.sum_net = 0.0
         self.sumR = 0.0; self.sumR2 = 0.0
+        self.sum_stop_pts = 0.0; self.sum_stop_pct = 0.0   # sumy |entry−SL| v bodech a v %
         self.yr = {}   # year -> [n, wins, sumR_gross, sum_net]
 
     def _close(self, exit_px, kind):
@@ -222,6 +223,8 @@ class ORB(QCAlgorithm):
                 want = RISK_FRAC * s.nav / risk_per_unit_ret if risk_per_unit_ret > 0 else 0.0
                 s.notional = min(s.nav, want)     # cap ≤ 1× (bez páky)
                 s.risk_dollars = s.notional * risk_per_unit_ret
+                s.sum_stop_pts += risk_pts
+                s.sum_stop_pct += risk_per_unit_ret
 
         # 2) SL/TP kontrola na [low, high] této svíčky (aktivní od vstupu vč. vstupní svíčky)
         for s in inst.sims.values():
@@ -303,6 +306,10 @@ class ORB(QCAlgorithm):
                 self.set_runtime_statistic(s.tag + "_sumR2", f"{s.sumR2:.4f}")
                 self.set_runtime_statistic(s.tag + "_net", f"{s.sum_net:.1f}")
                 self.set_runtime_statistic(s.tag + "_finalnav", f"{s.nav:.1f}")
+                avg_pts = (s.sum_stop_pts / s.n) if s.n else 0.0
+                avg_pct = (s.sum_stop_pct / s.n * 100) if s.n else 0.0
+                self.set_runtime_statistic(s.tag + "_avgstop_pts", f"{avg_pts:.2f}")
+                self.set_runtime_statistic(s.tag + "_avgstop_pct", f"{avg_pct:.3f}")
                 self.log(f"###ORB### tag={s.tag} n={s.n} wins={s.wins} tp={s.n_tp} "
                          f"sl={s.n_sl} eod={s.n_eod} ambig={s.n_ambig} skip={s.n_skip_news} "
                          f"sumR={s.sumR:.4f} sumR2={s.sumR2:.4f} net={s.sum_net:.1f} nav={s.nav:.1f}")
