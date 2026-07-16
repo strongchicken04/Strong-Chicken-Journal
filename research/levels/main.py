@@ -77,6 +77,13 @@ class Levels(QCAlgorithm):
         self.skey = None
         # RTH date
         self.rdate = None
+        # bezpečná inicializace všech stavů (jinak AttributeError na 1. baru)
+        self.sPV = 0.0; self.sV = 0.0; self.sP2V = 0.0; self.svp = {}
+        self.rPV = 0.0; self.rV = 0.0; self.rP2V = 0.0; self.rvp = {}
+        self.rth_hi = None; self.rth_lo = None; self.rth_open = None; self.prev_rth_close = None
+        self.or5h = self.or5l = self.or15h = self.or15l = self.or30h = self.or30l = None
+        self.ibh = self.ibl = None
+        self.on_hi = None; self.on_lo = None; self.gbx_open = None
 
     # ---------- VP helper ----------
     @staticmethod
