@@ -3,25 +3,26 @@ from AlgorithmImports import *
 # endregion
 
 # =====================================================================
-# PROJEKT 4 — OPENING RANGE BREAKOUT (15min, ATR SL/TP). IN-SAMPLE.
-# Zamrazená pravidla (orb_frozen_assumptions.md):
-#   OR = high/low prvních dvou 15-min svíček (9:30-10:00 ET).
+# PROJEKT 4 — ORB VARIANTA B: fixní TP 10 bodů, SL = opačná strana OR.
+# EXPLORATORNÍ, IN-SAMPLE, OOS NEDOTČENO.
+# Pravidla:
+#   OR = high/low prvních dvou 15-min svíček (9:30-10:00 ET = 30 min).
 #   Signál: 15-min close mimo OR (>high long, <low short), první za den.
 #   Vstup: open NÁSLEDUJÍCÍ 15-min svíčky. SL/TP aktivní od vstupu.
-#   SL = entry ∓ 2×ATR(14, 15-min, Wilder); TP = entry ± 1×ATR.
+#   TP = entry ± 10.0 BODŮ (fixní). SL = OPAČNÁ strana OR
+#        (long → SL = OR_low; short → SL = OR_high).
 #   Svíčka protne SL i TP → konzervativně SL first.
 #   Max 1 obchod/den; EOD flat 16:00; RTH only; look-ahead-free.
-#   Sizing: fixed-fractional risk 1% equity, notional cap ≤ 1× (bez páky).
-#   Costs: 0.4 bps opt / 1.2 bps cons round-turn (net_cons = verdikt).
-# Instrumenty: ES (primární) + NQ (robustness). Varianty: base (bez
-#   filtru) + filt (deterministický 10:00-ET news filtr, varianta A).
-# IS 2018-01-02 → 2025-09-30. OOS NEDOTČENO.
+#   Sizing: fixed-fractional risk 1% equity (risk = |entry−SL|),
+#           notional cap ≤ 1× (bez páky). Costs 1.2 bps net_cons.
+#   POZOR: 10 bodů = ~20 bps na ES (~5000) vs ~5 bps na NQ (~20000)
+#          — na obou doslova 10 bodů; NQ číst s tímto vědomím.
+# Instrumenty: ES + NQ. Varianty: base + filt (10:00-ET news filtr).
+# IS 2018-01-02 → 2025-09-30.
 # =====================================================================
 
 RISK_FRAC = 0.01
-ATR_LEN = 14
-SL_MULT = 2.0
-TP_MULT = 1.0
+PT_FIXED = 10.0         # fixní TP = 10 bodů (absolutní, adj. kontrakt)
 COST_CONS = 1.2 / 1e4   # NAV je net_cons
 OR_END_MIN = 10 * 60          # OR okno končí 10:00 (svíčky 9:45 a 10:00 end_time)
 FIRST_SIGNAL_MIN = 10 * 60 + 15   # první eligible signální bar end_time = 10:15
@@ -102,7 +103,8 @@ class Sim:
         self.notional = 0.0
         self.risk_dollars = 0.0
         self.pending = 0        # +1/-1 = čeká vstup na open další svíčky
-        self.pending_atr = 0.0
+        self.pending_orhi = 0.0
+        self.pending_orlo = 0.0
         # agregáty
         self.n = 0; self.wins = 0
         self.n_tp = 0; self.n_sl = 0; self.n_eod = 0
@@ -137,11 +139,10 @@ class Sim:
 
 
 class ORBInstrument:
-    """OR/ATR/denní stav pro jeden symbol + 2 simy (base, filt)."""
+    """OR/denní stav pro jeden symbol + 2 simy (base, filt)."""
     def __init__(self, symbol, name):
         self.symbol = symbol
         self.name = name
-        self.atr = AverageTrueRange(ATR_LEN, MovingAverageType.WILDERS)
         self.cur_date = None
         self.or_high = None
         self.or_low = None
@@ -201,25 +202,26 @@ class ORB(QCAlgorithm):
             inst.traded = False
             inst.is_news = dstr in NEWS_DAYS
 
-        # vždy aktualizuj ATR (kontinuální přes dny)
-        inst.atr.update(bar)
-
         # 1) fill pending vstupu na OPEN této svíčky
         for s in inst.sims.values():
             if s.pending != 0 and s.pos == 0:
                 d = s.pending
-                atr = s.pending_atr
                 e = bar.open
+                # SL = opačná strana OR; TP = entry ± 10 bodů (fixní)
+                stop = s.pending_orlo if d == 1 else s.pending_orhi
+                tp = e + d * PT_FIXED
+                risk_pts = (e - stop) if d == 1 else (stop - e)
+                s.pending = 0
+                if risk_pts <= 0:
+                    continue   # entry už za SL (gap) → obchod se neotevře
                 s.pos = d
                 s.entry = e
-                s.stop = e - d * SL_MULT * atr
-                s.tp = e + d * TP_MULT * atr
-                risk_per_unit_ret = (SL_MULT * atr) / e   # = |stop-entry|/entry
-                # fixed-fractional: notional * risk_per_unit_ret = RISK_FRAC*nav
+                s.stop = stop
+                s.tp = tp
+                risk_per_unit_ret = risk_pts / e   # = |stop-entry|/entry
                 want = RISK_FRAC * s.nav / risk_per_unit_ret if risk_per_unit_ret > 0 else 0.0
                 s.notional = min(s.nav, want)     # cap ≤ 1× (bez páky)
                 s.risk_dollars = s.notional * risk_per_unit_ret
-                s.pending = 0
 
         # 2) SL/TP kontrola na [low, high] této svíčky (aktivní od vstupu vč. vstupní svíčky)
         for s in inst.sims.values():
@@ -244,7 +246,7 @@ class ORB(QCAlgorithm):
 
         # 4) signál (první breakout dne), eligible od 10:15 end_time
         if (inst.or_bars >= 2 and not inst.traded and em >= FIRST_SIGNAL_MIN
-                and inst.atr.is_ready and inst.or_high is not None):
+                and inst.or_high is not None):
             d = 0
             if bar.close > inst.or_high:
                 d = 1
@@ -252,7 +254,6 @@ class ORB(QCAlgorithm):
                 d = -1
             if d != 0:
                 inst.traded = True   # max 1 obchod/den (i pro filt, pro férové srovnání "první breakout")
-                atrv = inst.atr.current.value
                 for key, s in inst.sims.items():
                     if s.pos != 0:
                         continue
@@ -260,7 +261,8 @@ class ORB(QCAlgorithm):
                         s.n_skip_news += 1
                         continue
                     s.pending = d
-                    s.pending_atr = atrv
+                    s.pending_orhi = inst.or_high
+                    s.pending_orlo = inst.or_low
 
         # 5) EOD flat na 16:00 close
         if em >= CLOSE_MIN:
