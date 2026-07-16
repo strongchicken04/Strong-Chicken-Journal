@@ -136,7 +136,9 @@ Tohle NEjsou úpravy k „doladění" současné strategie (to by byl overfittin
 
 **Per-year:** 2–4 ziskové roky z 8 (o něco lepší než A, ale žádná varianta ne většinově kladná; 2019/2020/2024 stabilně ztrátové napříč instrumenty).
 
-**Souhrn Projekt 4:** Ani ATR-based (varianta A), ani fixní-TP/range-SL (varianta B) konfigurace 15-min ORB nemá na ES/NQ 2018–2025 kladnou net expectancy. Dvě protilehlé RR geometrie (A: RR 2:1 v neprospěch, nízký win; B: malý fixní TP, vysoký win) skončily obě záporně — směrový edge continuation po 15-min OR průrazu je na těchto indexových futures prakticky nulový. **OOS zůstává nedotčené.** Data varianty B: `results/orb_b_is.json`, `data/cache/orb_b_nav.csv`, figura `results/figures/orb_b_equity.png`.
+**Souhrn Projekt 4:** Ani ATR-based (varianta A), ani fixní-TP/range-SL (varianta B) konfigurace 15-min ORB nemá na ES/NQ 2018–2025 kladnou net expectancy. Dvě protilehlé RR geometrie (A: RR 2:1 v neprospěch, nízký win; B: malý fixní TP, vysoký win) skončily obě záporně — směrový edge continuation po 15-min OR průrazu je na těchto indexových futures prakticky nulový. **OOS zůstává nedotčené.** Data varianty B: `results/orb_b_is.json`, `data/cache/orb_b_nav.csv`.
+
+![Varianta B — equity křivky (NQ 88 % win rate a přesto ztráta)](results/figures/orb_b_equity.png)
 
 ### Varianta B — průměrná velikost stopu (uzavírající datapoint)
 
@@ -164,11 +166,15 @@ Otázka: existuje frakce vzdálenosti ke stopu, za kterou se trade už skoro nev
 - **ES:** jakmile je trade ~¼ cesty ke stopu, šance na návrat na TP klesá pod 40 %, za ~½ pod 25 %. Trady, co zajdou ~0,4–0,5R proti, se **skoro nevracejí**. → Zkrácení stopu na ~0,5–0,6R **reálně zlepší expectancy** (−0,051 → −0,029 R/obchod, tj. skoro půlka ztráty pryč). Tvoje intuice na ES **platí**.
 - **NQ:** recovery zůstává **vysoká** hluboko do stopu (>40 % až do 0,52R, >25 % až do 0,68R) — protože TP je jen 8 % R, takže i trade hluboko v mínusu se často „ťukne" zpět o těch pár bodů na TP. → Zkrácení stopu na NQ **spíš škodí** (utne vítěze, co se vraceli); nejlepší k=0,88R je prakticky současný stop, zlepšení nulové.
 
-**Klíčový (přenositelný) závěr:** MAE-based zkrácení stopu pomáhá **jen když je TP dost daleko**, aby se adverse trade nevrátil náhodou (ES). Když je TP mrňavý vůči riziku (NQ picking-pennies), hluboké MAE se pořád vracejí a těsnější stop je kontraproduktivní. **A v OBOU případech i nejlepší zkrácený stop zůstává net záporný** — zmenší to krvácení (ES −0,051 → −0,029), ale strategii to nedělá ziskovou. Data: `data/cache/orb_mae.json`, figura `results/figures/orb_mae.png`.
+**Klíčový (přenositelný) závěr:** MAE-based zkrácení stopu pomáhá **jen když je TP dost daleko**, aby se adverse trade nevrátil náhodou (ES). Když je TP mrňavý vůči riziku (NQ picking-pennies), hluboké MAE se pořád vracejí a těsnější stop je kontraproduktivní. **A v OBOU případech i nejlepší zkrácený stop zůstává net záporný** — zmenší to krvácení (ES −0,051 → −0,029), ale strategii to nedělá ziskovou. Data: `data/cache/orb_mae.json`.
+
+![MAE analýza — recovery křivka + counterfactual zkráceného stopu](results/figures/orb_mae.png)
 
 ### Varianta C — ES grid: zkrácený stop × RR-based TP (test příznivého RR)
 
-Motivace: A (2:1 proti) i B (mrňavý TP) byly nepříznivé RR. Zde test **příznivého RR** (jediná nevyzkoušená geometrie): SL = s×šířka_OR, TP = m×stop_dist (RR 1:m). ES, IS, měřeno v net R/obchod. bt `4d7be54fd8da19a0b719ab3c33a714e0`, data `data/cache/orb_grid.json`, heatmapa `results/figures/orb_grid_heatmap.png`.
+Motivace: A (2:1 proti) i B (mrňavý TP) byly nepříznivé RR. Zde test **příznivého RR** (jediná nevyzkoušená geometrie): SL = s×šířka_OR, TP = m×stop_dist (RR 1:m). ES, IS, měřeno v net R/obchod. bt `4d7be54fd8da19a0b719ab3c33a714e0`, data `data/cache/orb_grid.json`.
+
+![Varianta C — heatmapa mean net R přes grid stop × RR](results/figures/orb_grid_heatmap.png)
 
 **RR trend (průměr mean-net-R přes všechna s, dle m) — směrově REÁLNÝ:**
 
@@ -234,6 +240,12 @@ Nejlepší buňky (RVOL=1,2, ATR=off, přes P) jsou sice vedle sebe (−0,006 / 
 **NEPODPOŘENO.** Pre-market 1-min breakout s 1:1 RR nemá na NQ (2018–2025) po nákladech kladnou expectancy v žádné z 18 filtrových kombinací. Binární win rate je hod mincí (51,3 %, CI straddluje 50 %). Jediný směrově smysluplný filtr (RVOL≥1,2) dovede expectancy jen k nule, statisticky nerozeznatelně, a rozpadá se u přísnější prahu. **Konzistentní s nezávislou MNQ falsifikační studií** (ORB varianty na mikro-NQ FAIL po frikci) i s Projektem 4 (A/B/C). **OOS nedotčeno** — není robustní kandidát k validaci.
 
 **Reprodukovatelnost:** kód `research/orb_4b/main.py`, config `research/orb_4b/config.json` (cloud-id 34193719), data `data/cache/orb_4b_grid.json`, figura `results/figures/orb_4b_heatmap.png`, spec `orb_4b_frozen_assumptions.md`.
+
+### Varianta 4b — explorativní RR 1,5:1 + SL 1,5b buffer + RVOL≥1,2 (equity curve)
+
+Uživatelská úprava (RR 1,5:1, stop 1,5 bodu za koncem range, RVOL≥1,2). IS 2018–2025: **CAGR +1,0 %, Sharpe 0,27, MDD −9,3 %, hit 43,3 % (breakeven 40 %), ale mean R +0,037 s t=0,69, p=0,49 = statisticky nula.** Poprvé mírně kladná equity křivka z ORB rodiny, ale neodlišitelná od šumu (a tažená 2019–2020) — NE na OOS. Vedla k Projektu 5 (order-flow reverse-engineering).
+
+![Explorativní 4b RR1,5 equity curve](results/figures/orb_4b_equity.png)
 
 ## Varianta 4b — Regime diagnostika (Fáze 1, condition-first, NQ)
 

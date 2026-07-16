@@ -131,6 +131,10 @@ P(CAGR<0) = **3,2 %**. †MDD z trade-level equity křivky (jemnější granular
 
 **P(total > 0) = 44,8 % · P(total < −5 %) = 35,5 % · P(total > +4,7 % IS-implikace) = 28,7 %.**
 
+![Monte Carlo bootstrap — rozdělení CAGR/Sharpe](results/figures/d2_montecarlo.png)
+
+![Monte Carlo fan chart — rozptyl equity křivek](results/figures/d2_mc_fan.png)
+
 → Empirická odpověď na „kolik z −1,33 % je šum": prakticky **celé**. OOS okno je mincovní hod — 45 % bootstrap hmoty je kladných, 29 % dokonce nad IS-implikovanou úrovní. Segment nemá sílu rozlišit „strategie funguje jako IS" od „strategie je mrtvá"; verdikt „nejednoznačné" z R3 je empiricky potvrzený, ne jen analytický.
 
 ### B) 2D grid 5×5 (band × VT, net_cons, IS) — Sharpe
@@ -143,7 +147,9 @@ P(CAGR<0) = **3,2 %**. †MDD z trade-level equity křivky (jemnější granular
 | 25 bps | **1,04** | 0,99 | 0,94 | 0,89 | 0,86 |
 | 30 bps | 0,87 | 0,85 | 0,81 | 0,78 | 0,78 |
 
-(★ = nasazená konfigurace; CAGR/MDD mřížky v `results/vwap_d2_grid.csv`; heatmapa `results/figures/d2_heatmap.png`.)
+(★ = nasazená konfigurace; CAGR/MDD mřížky v `results/vwap_d2_grid.csv`.)
+
+![2D grid heatmapa (band × VT, Sharpe)](results/figures/d2_heatmap.png)
 
 **Cluster analýza (`scipy.ndimage.label`, 4-connectivity):**
 - Práh Sharpe ≥ 0,5: **jeden souvislý ostrov 16/25 buněk** (celé řádky b=20/25/30 + (15,10)); (20,15) **uvnitř ostrova, na jeho okraji** (soused b=15 je pod prahem).
