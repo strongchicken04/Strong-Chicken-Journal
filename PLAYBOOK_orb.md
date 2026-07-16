@@ -217,3 +217,24 @@ Nejlepší buňky (RVOL=1,2, ATR=off, přes P) jsou sice vedle sebe (−0,006 / 
 **NEPODPOŘENO.** Pre-market 1-min breakout s 1:1 RR nemá na NQ (2018–2025) po nákladech kladnou expectancy v žádné z 18 filtrových kombinací. Binární win rate je hod mincí (51,3 %, CI straddluje 50 %). Jediný směrově smysluplný filtr (RVOL≥1,2) dovede expectancy jen k nule, statisticky nerozeznatelně, a rozpadá se u přísnější prahu. **Konzistentní s nezávislou MNQ falsifikační studií** (ORB varianty na mikro-NQ FAIL po frikci) i s Projektem 4 (A/B/C). **OOS nedotčeno** — není robustní kandidát k validaci.
 
 **Reprodukovatelnost:** kód `research/orb_4b/main.py`, config `research/orb_4b/config.json` (cloud-id 34193719), data `data/cache/orb_4b_grid.json`, figura `results/figures/orb_4b_heatmap.png`, spec `orb_4b_frozen_assumptions.md`.
+
+## Varianta 4b — Regime diagnostika (Fáze 1, condition-first, NQ)
+
+Otázka uživatele: proč 4b equity (RR 1,5:1, SL 1,5b, RVOL≥1,2) vydělávala hlavně 2019–2020 a slabě 2024–25 — je to režimově podmíněné? Metoda: každý obchod otagován předem danou režimovou proměnnou k 9:30 (look-ahead-free), edge měřen **per kýbl** (condition-first, ne outcome-first). bt `1539f697a2a2b49ed7b35f18fe53cdb3`.
+
+Overall: n=523, mean net R +0,037, t=0,69, p=0,49.
+
+| proměnná | kýbl (mean net R, n) | monotónní? | signif.? |
+|---|---|---|---|
+| **ATR%** (denní range NQ) | nízké −0,040 (201) · střed +0,052 (156) · **vysoké +0,118 (142)** | **ANO** (čistě roste) | ne (hi p=0,26) |
+| VIX (vč. close) | <15 +0,096 · 15-20 +0,046 · 20-30 −0,059 · ≥30 +0,197 (n=43) | ne (cikcak) | ne |
+| Realized vol 10d | nízké +0,041 · střed −0,064 · vysoké +0,125 | ne (cikcak) | ne (hi p=0,21) |
+| ADX (trend) | <20 −0,002 · 20-25 +0,131 · ≥25 −0,003 | ne (vrchol uprostřed) | ne |
+
+**Nález:** jediná proměnná s **čistě monotónním** vztahem edge↔režim je **ATR%** (vlastní realized range NQ): nízká volatilita → záporný edge, vysoká → nejvyšší kladný. To je **ekonomicky konzistentní** s hypotézou „breakout continuation funguje ve volatilnějším/širším režimu". VIX a realized-vol jdou stejným směrem u krajů (nízké slabší, vysoké nejlepší), ale uprostřed cikcak. ADX ukazuje, že nejlepší jsou dny **mírného** trendu (20–25), ne nejsilnějšího — extrémní ADX (≥25) je nula.
+
+**Ale poctivě:** (a) ani jeden kýbl není statisticky signifikantní (nejlepší ATR-hi p=0,26); (b) monotónnost má jen ATR%, ostatní vol-proxy ji nepotvrzují čistě; (c) riziko, že high-ATR edge je jen **re-objevení roku 2020** (vysoké ATR se koncentruje v COVID). **Decisive test před stavěním čehokoli: časová stabilita ATR% efektu** (drží high-ATR edge ve VÍCE vol epizodách — 2018Q4, 2020, 2022 — nebo jen 2020?).
+
+![regime](results/figures/orb_4b_regime.png)
+
+**Status:** Fáze 1 dává **slabý, ekonomicky smysluplný lead (ATR%)**, ne potvrzený conditioner. Další krok = time-stability ATR% (Fáze 3 předsazená jako gate). OOS nedotčeno.
