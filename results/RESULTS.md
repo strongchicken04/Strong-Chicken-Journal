@@ -642,3 +642,9 @@ VERDIKT: pořád ztrátové (všechny 4), ale mělčí než A. NQ = picking penn
 bt 4d7be54fd8da19a0b719ab3c33a714e0. SL=s×šířka_OR, TP=m×stop, grid 6×4, net R/obchod. Test příznivého RR (dosud netestováno).
 
 RR trend (avg mean-net-R přes s): m=1→−0,076, m=1.5→−0,067, m=2→−0,049, m=3→−0,029. Širší TP monotónně líp (potvrzeno), ale jen k nule. Jen 3/24 buněk kladné (všechny m=3). Nejlepší s=0.6 m=3: mean +0,0139R, ale t=0,39 p=0,70 (= nula), sousedé záporní (ne ostrov), Sharpe +0,009. VERDIKT: žádný robustní edge; příznivé RR = z „ztrátové" na „~breakeven". Doporučení pokud nutno: s≈0,7 m=3, ale ~nula, NE na OOS. Souhrn P4: ORB continuation na ES/NQ nemá edge v žádné z 3 RR geometrií. OOS nedotčeno. Detail: PLAYBOOK_orb.md.
+
+### PROJEKT 4b — pre-market ORB, 1-min breakout, 1:1 RR + filtry (NQ), IS
+
+Spec orb_4b_frozen_assumptions.md. NQ extended hours, range 9:15-9:30, 1-min breakout, SL=opačná strana range, TP 1:1, filtry range%×RVOL×ATR (18 kombinací). QC 34193719, bt 28397134653b59965d07549cce9c720d. IS, OOS nedotčeno.
+
+VERDIKT: NEPODPOŘENO. 0/18 kombinací kladná. Baseline TP-of-decided 51,3% [49,1;53,5] = straddluje 50% breakeven (hod mincí), mean net R −0,042. Nejlepší RVOL≥1,2: −0,006 R (t=−0,13, p=0,89 = nula, pořád záporné), rozpadá se u RVOL≥1,5 (−0,098). ATR-pro-vol filtr neutrální/škodlivý. Island check: fragilní hřeben, ne stabilní ostrov (optimizer's curse). Konzistentní s MNQ falsifikační studií + Projekt 4 A/B/C. Detail: PLAYBOOK_orb.md sekce Varianta 4b.

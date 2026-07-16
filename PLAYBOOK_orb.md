@@ -177,3 +177,43 @@ Motivace: A (2:1 proti) i B (mrňavý TP) byly nepříznivé RR. Zde test **př�
 **Moje doporučení (na tvou žádost „ideální stop + nejlepší TP"):** Z dat je nejobhajitelnější **s≈0,7 (střed ploché nej-oblasti 0,6–0,8), m=3,0** — tedy stop ~70 % šířky OR a TP = 3× stop. Ale s výslovným závěrem: **je to ~breakeven, ne validovaný edge.** Point estimate +0,007 až +0,014 R/obchod je neodlišitelný od nuly (p≥0,7).
 
 **Rozhodnutí o OOS: NE.** Tohle nepřekračuje laťku pro spotřebování jednorázového OOS okna — dát coin-flip (p=0,70) na precious OOS by bylo plýtvání. Příznivé RR zachránilo ES-ORB z „jasně ztrátové" na „přibližně nula", což je poučné (RR intuice platí), ale ne tradeable. **Souhrn Projektu 4: 15-min ORB continuation na ES/NQ nemá po nákladech kladnou expectancy v žádné ze tří testovaných RR geometrií (A/B/C); nejlepší dosažitelné je ~nula s příznivým RR. OOS nedotčeno.**
+
+---
+
+# VARIANTA 4b — pre-market range, 1-min breakout, 1:1 RR + filtry (NQ)
+
+**Odlišná varianta, ne náhrada Projektu 4.** Spec: `orb_4b_frozen_assumptions.md` (potvrzeno). NQ, extended hours, projekt QC 34193719, bt `28397134653b59965d07549cce9c720d`. IS 2018-01-02→2025-09-30. **OOS ROZHODNUTÍ ODLOŽENO — NESPOTŘEBOVÁNO.**
+
+Pravidla: range = high/low jediné svíčky 9:15–9:30 ET (před cash-open); breakout = 1-min close venku z range (od 9:31), první za den; vstup open další 1-min svíčky; SL = opačná strana range; TP = 1:1 (=|entry−SL|); max 1/den; EOD flat 16:00; net_cons 1,2 bps; metrika net R/obchod. Filtry: range percentil {off,50,75} × RVOL {off,1.2,1.5} × denní-ATR percentil {off,≥p50} = 18 kombinací.
+
+## Výsledek: NEPODPOŘENO — 0 z 18 kombinací kladná
+
+| kombinace | n | obch/den | TP-of-decided % | mean net R | t | p | kladných let |
+|---|---|---|---|---|---|---|---|
+| **baseline (vše off)** | 1969 | 1,02 | 51,3 % [49,1;53,5] | −0,0422 | −1,87 | 0,06 | 3/8 |
+| RVOL≥1,2 (nejlepší) | 507 | 0,26 | 52,0 | **−0,0059** | −0,13 | 0,89 | 4/8 |
+| RVOL≥1,2 + range≥p50 | 446 | 0,23 | 51,7 | −0,0081 | −0,17 | 0,86 | 5/8 |
+| RVOL≥1,5 | 253 | 0,13 | 47,0 | −0,0982 | −1,58 | 0,12 | 3/8 |
+| range≥p50 | 964 | 0,50 | 51,1 | −0,0254 | −0,79 | 0,43 | 2/8 |
+| ATR≥p50 | 890 | 0,46 | 50,9 | −0,0415 | −1,23 | 0,22 | 4/8 |
+
+- **Žádná z 18 kombinací nemá kladné total net R.** Nejlepší (RVOL≥1,2 sólo) je −0,006 R/obchod: **statisticky nula** (t=−0,13, p=0,89), a pořád záporné.
+- **Baseline binární win rate 51,3 % [49,1; 53,5]** — Wilson CI **straddluje 50 %** breakeven → directional edge 1-min breakoutu je hod mincí. Po nákladech (1,2 bps na těsný strukturální stop = nezanedbatelný náklad v R) → záporné.
+
+## Marginální efekty filtrů
+
+- **RVOL ≥ 1,2:** jediný filtr s věcně smysluplným efektem — odstraní low-participation breakouty, posune expectancy z −0,042 na −0,006 (≈ breakeven). **ALE:** (a) pořád záporné, (b) p=0,89 (= nula), (c) **RVOL≥1,5 to obrátí** na −0,098 (win rate spadne na 47 %) → efekt **není monotónní**, je fragilní. Vzorek navíc padá z 1969 na 507 (−74 %).
+- **Range percentil:** slabý, nekonzistentní (p50 −0,025, p75 −0,031) — nezvedá edge.
+- **ATR ≥ p50 (pro-volatilitu):** neutrální až škodlivý (baseline slice se nezlepší, kombinace s ním jsou horší). Směr „pro volatilitu" nepomohl; testovat opačný (strop) nemá po tomhle smysl — základ je záporný tak jako tak.
+
+## Island check (D2-disciplína) — fragilní, ne stabilní
+
+Nejlepší buňky (RVOL=1,2, ATR=off, přes P) jsou sice vedle sebe (−0,006 / −0,008 / −0,018), ALE jejich sousedé v jiných osách **prudce padají**: RVOL→1,5 srazí na −0,10; ATR→p50 zhorší na −0,041/−0,053. **Není to stabilní ostrov — je to hřeben na hraně útesu.** Přesně optimizer's-curse signatura: „nejlepší" buňka obklopená výrazně horšími sousedy.
+
+![ORB 4b heatmap](results/figures/orb_4b_heatmap.png)
+
+## Verdikt 4b
+
+**NEPODPOŘENO.** Pre-market 1-min breakout s 1:1 RR nemá na NQ (2018–2025) po nákladech kladnou expectancy v žádné z 18 filtrových kombinací. Binární win rate je hod mincí (51,3 %, CI straddluje 50 %). Jediný směrově smysluplný filtr (RVOL≥1,2) dovede expectancy jen k nule, statisticky nerozeznatelně, a rozpadá se u přísnější prahu. **Konzistentní s nezávislou MNQ falsifikační studií** (ORB varianty na mikro-NQ FAIL po frikci) i s Projektem 4 (A/B/C). **OOS nedotčeno** — není robustní kandidát k validaci.
+
+**Reprodukovatelnost:** kód `research/orb_4b/main.py`, config `research/orb_4b/config.json` (cloud-id 34193719), data `data/cache/orb_4b_grid.json`, figura `results/figures/orb_4b_heatmap.png`, spec `orb_4b_frozen_assumptions.md`.
