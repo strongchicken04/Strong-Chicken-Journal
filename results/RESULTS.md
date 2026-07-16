@@ -652,3 +652,9 @@ VERDIKT: NEPODPOŘENO. 0/18 kombinací kladná. Baseline TP-of-decided 51,3% [49
 ### PROJEKT 4b — regime time-stability (Fáze 3 gate) — NEGATIVNÍ
 
 bt 2a2f2e0c7f8ac33817e66bb9ecf1cd23. Test: drží high-ATR edge (lead z Fáze 1) ve dvou půlkách IS? ATR hi: 2018-2021 mean +0,262 (n=62) → 2022-2025 +0,007 (n=80). Per-rok: high-ATR kladné dělá skoro celý 2020 (+14,4/25 obchodů). Monotónnost se v 2. půlce rozpadla (nejlepší je "střední" ATR). RV stejně. VERDIKT: vol-conditioner NEPŘEŽIL = artefakt 2020, ne stabilní režim. Regime-switching systém nemá na čem stát → nestaví se (jinak fit na 2020). OOS nedotčeno. Detail: PLAYBOOK_orb.md.
+
+## PROJEKT 5 — VWAP/VP order-flow setup, KOSTRA (bez delta gate), ES IS
+
+Reverse-engineering diskréčního setupu uživatele. Session VWAP 18:00 ET + ±1σ + VP (POC/VAH/VAL), cíl=nejbližší úroveň, stop 1:1, okno 10:00-16:00 ET, 1/den. QC 34197200, bt b8aa35c3c9f40580d4a5237b7320c515. OOS nedotčeno.
+
+CONT (průraz): n=375, mean net R −0,176, t=−3,34, p=0,001, gross hit 53,1% (nad 50 nesignif.). REV (fade): n=1993, mean net R −0,270, t=−11,73, p<0,001, gross hit 46,0% (hůř než coin flip). Obě záporné každý rok. ZÁVĚR: struktura bez delta gate = záporná/coin-flip → edge uživatele je v order flow readu, ne v úrovních. REV fade aktivně špatný, CONT (co uživatel hraje) coin-flip → jeho výběr strany strukturálně správný. Kolej B (delta gate) = ticková data, další rozhodnutí. Detail: PLAYBOOK_vwap_vp.md.
