@@ -664,3 +664,9 @@ CONT (průraz): n=375, mean net R −0,176, t=−3,34, p=0,001, gross hit 53,1% 
 Day-trade: r(9:30-10:00) předpovídá r(15:30-16:00)? Vstup 15:30, výstup 16:00, flat. QC 34201180, bt 5c6f2ada337aaafabf0cb27cb584928e. OOS nedotčeno.
 
 REGRESE r_first→r_last: n=1935, β=−0,0195, corr=−0,018, t=−0,78, p=0,44 → ŽÁDNÁ prediktivní vazba na ES (ne-li slabá reverze). Signály (net_cons, bps/obchod, hit%): first −1,86 (46,7%), pen −0,25 (47,3%), cum −0,81 (47,0%), combo −0,81 (47,6%). Všechny 4 ztrácejí, hit <50%, záporný Sharpe, NAV pod 100k. VERDIKT: NEPODPOŘENO — intraday momentum na ES 2018-2025 neexistuje (dekoval po publikaci; konzistentní s Projektem 2b, kde příbuzná SPY varianta padla na OOS). OOS nedotčeno. Figura results/figures/intraday_mom.png.
+
+## PROJEKT 7 — Level Edge Study (~44 úrovní, rejection rate vs náhoda), ES IS
+
+Mapa, kde cena reaguje víc než náhoda → kde číst order flow. QC 34201573, bt 99afb71544d2931631a9f7b694896126. Kontrola RANDOM = 52,0 %. OOS nedotčeno.
+
+BOUNCE (odraz > náhoda, z>2): OR5L 60,3% (z+4,5, n1736), OR5H 58,4% (z+3,5), sV−2 57,6% (z+2,7), sV+3 62,9% (z+2,4, n154). THROUGH (průraz, z<-2): POC 39,5% (z−7,0, n1986). JAKO NÁHODA: round numbers, PDH/PDL/PDC, overnight, weekly, IB, OR15/30, prior-day VP, SMA, sVWAP. ZÁVĚR: 5-min opening range extrémy = reálné bounce zóny, POC = through/magnet — jasně nad náhodou, obří vzorek. Folklor (round/PDH/PDL/overnight) nereaguje. Není mechanická edge (biasy mírné), je to mapa kam mířit diskréční flow read. Detail: PLAYBOOK_levels.md.
