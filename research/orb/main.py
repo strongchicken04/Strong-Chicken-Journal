@@ -112,6 +112,13 @@ class Sim:
         self.sum_gross = 0.0; self.sum_net = 0.0
         self.sumR = 0.0; self.sumR2 = 0.0
         self.sum_stop_pts = 0.0; self.sum_stop_pct = 0.0   # sumy |entry−SL| v bodech a v %
+        # MAE analýza: histogram přes 25 binů frakce MAE/R (0..1, SL→bin24)
+        self.NB = 25
+        self.h_cnt = [0] * self.NB      # počet obchodů v binu
+        self.h_tp = [0] * self.NB       # z toho skončilo na TP
+        self.h_sumR = [0.0] * self.NB   # suma gross R v binu
+        self.tot_costR = 0.0            # suma cost v R (na obchod)
+        self.worst = None               # nejhorší (adverse) cena za otevřený obchod
         self.yr = {}   # year -> [n, wins, sumR_gross, sum_net]
 
     def _close(self, exit_px, kind):
@@ -132,6 +139,19 @@ class Sim:
         self.sum_net += pnl_net
         self.sumR += R
         self.sumR2 += R * R
+        # --- MAE bucketing ---
+        risk_pts = abs(self.entry - self.stop)
+        if risk_pts > 0 and self.worst is not None:
+            mae_pts = (self.entry - self.worst) if d == 1 else (self.worst - self.entry)
+            mae_frac = mae_pts / risk_pts
+            b = int(mae_frac * self.NB)
+            if b < 0: b = 0
+            if b >= self.NB: b = self.NB - 1
+            self.h_cnt[b] += 1
+            if kind == "tp": self.h_tp[b] += 1
+            self.h_sumR[b] += R
+            self.tot_costR += (cost / self.risk_dollars) if self.risk_dollars > 0 else 0.0
+        self.worst = None
         self.pos = 0
 
     def _year_bump(self, year):
@@ -223,12 +243,18 @@ class ORB(QCAlgorithm):
                 want = RISK_FRAC * s.nav / risk_per_unit_ret if risk_per_unit_ret > 0 else 0.0
                 s.notional = min(s.nav, want)     # cap ≤ 1× (bez páky)
                 s.risk_dollars = s.notional * risk_per_unit_ret
+                s.worst = e   # init MAE tracker na entry
                 s.sum_stop_pts += risk_pts
                 s.sum_stop_pct += risk_per_unit_ret
 
         # 2) SL/TP kontrola na [low, high] této svíčky (aktivní od vstupu vč. vstupní svíčky)
         for s in inst.sims.values():
             if s.pos != 0:
+                # MAE update: nejhorší adverse cena za trade
+                if s.pos == 1:
+                    if s.worst is None or bar.low < s.worst: s.worst = bar.low
+                else:
+                    if s.worst is None or bar.high > s.worst: s.worst = bar.high
                 hit_sl = (bar.low <= s.stop) if s.pos == 1 else (bar.high >= s.stop)
                 hit_tp = (bar.high >= s.tp) if s.pos == 1 else (bar.low <= s.tp)
                 if hit_sl and hit_tp:
@@ -316,3 +342,8 @@ class ORB(QCAlgorithm):
                 for y in sorted(s.yr):
                     n, w, _, net = s.yr[y]
                     self.log(f"###ORBYR### tag={s.tag} year={y} n={n} wins={w} net={net:.1f}")
+                cnt = ",".join(str(x) for x in s.h_cnt)
+                tp = ",".join(str(x) for x in s.h_tp)
+                sr = ",".join(f"{x:.4f}" for x in s.h_sumR)
+                self.log(f"###MAE### tag={s.tag} nb={s.NB} n={s.n} costR={s.tot_costR:.4f} "
+                         f"cnt={cnt} tp={tp} sumR={sr}")
