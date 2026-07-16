@@ -608,3 +608,18 @@ Test nápadu uživatele „fixní TP = ½ stopu (RR 1:2)". Fixní TP = tp_mult×
 | bez TP (baseline) | 36,4 | 5051 | +9,5 % | +0,59 | −22,4 % | 51043 |
 
 VERDIKT: fixní TP monotónně ničí edge (čím těsnější, tím hůř). 0,5R obrátil +9,5 % → −6,8 %. Baseline reprodukuje D2 b=20 (+9,5 %, Sharpe 0,59) → sanity OK. Mechanismus: edge žije ve vzácných dlouhých trendech; fixní TP usekne pravý ocas → klamavě vysoký winrate (0,25R: 79,6 % hit / −11,3 % CAGR) — identická past jako Projekt 1. Dopad na nasazení: žádný (IS-only explorace, deploy zůstává b=20+VT15 bez TP; žádná varianta ani na OOS kandidátní seznam).
+
+---
+
+## PROJEKT 4 — Opening Range Breakout (15min, ATR SL/TP), IN-SAMPLE
+
+Zamrazená spec `orb_frozen_assumptions.md` (potvrzeno). OR = high/low prvních dvou 15-min svíček (9:30–10:00 ET); vstup na open svíčky po prvním 15-min close mimo OR; SL=entry∓2×ATR(14,15-min), TP=entry±1×ATR; SL-first při ambiguitě; max 1 obchod/den; EOD flat 16:00; 1% risk cap ≤1× notional; net_cons 1,2 bps. ES+NQ × base/filt. IS 2018-01-02→2025-09-30, OOS nedotčeno. QC 34184379, bt 095398965b38ac76d201a072dd2c1dcd.
+
+| varianta | final NAV (100k) | CAGR | Sharpe | MDD | n | TP-of-decided | vs 66,7% |
+|---|---|---|---|---|---|---|---|
+| ES base | 61801 | −6,0 % | −1,01 | −39,0 % | 1963 | 66,6 % [64,4;68,8] | straddle |
+| ES filt | 66696 | −5,1 % | −0,96 | −34,6 % | 1513 | 66,2 % [63,6;68,7] | straddle |
+| NQ base | 70725 | −4,4 % | −0,58 | −31,3 % | 1929 | 68,5 % [66,3;70,7] | straddle |
+| NQ filt | 65920 | −5,2 % | −0,80 | −35,2 % | 1488 | 67,6 % [65,0;70,1] | straddle |
+
+VERDIKT: NEPODPOŘENO. Všechny 4 varianty ztrácejí (CAGR −4,4 až −6,0 %, záporný Sharpe, 1–2 ziskové roky z 8). Binární win rate (TP-of-decided) statisticky nerozeznatelný od 66,7 % breakeven (RR 2:1) → directional edge nulový nad rámec geometrie; po EOD výstupech (~12 %) + nákladech záporná NAV. News filtr nekonzistentní (ES +, NQ −) = šum, nezachrání. Krok-0 design note (potřeba >67 %) potvrzena jako předběžná falzifikovatelná předpověď. OOS ODLOŽENO — NESPOTŘEBOVÁNO (není co validovat). Detail: PLAYBOOK_orb.md.
