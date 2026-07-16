@@ -31,12 +31,14 @@ class Acc:
     def __init__(self):
         self.n = 0; self.wins = 0; self.tp = 0; self.sl = 0
         self.sumR = 0.0; self.sumR2 = 0.0
-    def add(self, R, kind):
+        self.yr = {}   # year -> [n, sumR]
+    def add(self, R, kind, year):
         self.n += 1
         if R > 0: self.wins += 1
         if kind == "tp": self.tp += 1
         elif kind == "sl": self.sl += 1
         self.sumR += R; self.sumR2 += R * R
+        e = self.yr.setdefault(year, [0, 0.0]); e[0] += 1; e[1] += R
 
 
 class ORB4bRegime(QCAlgorithm):
@@ -132,9 +134,10 @@ class ORB4bRegime(QCAlgorithm):
         cost = self.notional * COST
         R = (gross - cost) / self.risk_dollars if self.risk_dollars > 0 else 0.0
         self.nav += (gross - cost)
-        self.overall.add(R, kind)
+        yr = self.day.year
+        self.overall.add(R, kind, yr)
         for var in self.B:
-            self.B[var][self.lab[var]].add(R, kind)
+            self.B[var][self.lab[var]].add(R, kind, yr)
         self.pos = 0
 
     def on1(self, bar):
@@ -203,3 +206,8 @@ class ORB4bRegime(QCAlgorithm):
                 if a.n > 0:
                     self.log(f"###REG### var={var} bucket={k} n={a.n} wins={a.wins} "
                              f"tp={a.tp} sl={a.sl} sumR={a.sumR:.4f} sumR2={a.sumR2:.4f}")
+        # per-year rozpad vol proměnných (time-stability test)
+        for var in ["atr", "rv", "vix"]:
+            for k, a in self.B[var].items():
+                for y, (n, s) in sorted(a.yr.items()):
+                    self.log(f"###REGYR### var={var} bucket={k} year={y} n={n} sumR={s:.4f}")
