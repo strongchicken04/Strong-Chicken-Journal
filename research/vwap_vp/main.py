@@ -1,0 +1,213 @@
+# region imports
+from AlgorithmImports import *
+# endregion
+
+# =====================================================================
+# PROJEKT 5 — VWAP/VP order-flow setup: STRUKTURNÍ KOSTRA (bez delty).
+# Reverse-engineering diskréčního ES setupu uživatele. IN-SAMPLE, NQ→ES.
+# POZOR: uživatel NIKDY nevstupuje bez delta/volume konfirmace. Tohle
+#   testuje strukturu BEZ toho gate → očekávaně ~nula; ta nula je nález
+#   (edge je pak v order flow, ne v úrovních). OOS NEDOTČENO.
+# Pravidla (orb... pardon, vwap_vp frozen spec, potvrzeno):
+#   ES, extended hours. Session VWAP kotvený 18:00 ET (reset denně),
+#   ±1σ deviation band. Developing volume profile od 18:00 ET → POC,
+#   VAH, VAL (70% VA). Úrovně = {VWAP, +1σ, −1σ, POC, VAH, VAL}.
+#   Okno: vstupy jen 10:00–16:00 ET, max 1 obchod/den (první trigger).
+#   Dvě varianty (zvlášť):
+#     CONT: 1-min close ZA ±1σ → vstup ve směru průrazu.
+#     REV : 1-min dotyk ±1σ → vstup zpět k VWAP.
+#   Cíl = nejbližší úroveň ve směru; STOP = fixní 1:1. Fill next open.
+#   EOD flat 16:00 ET. net_cons 1.2 bps. Metrika: net R + hit vs 50 %.
+# =====================================================================
+
+COST = 1.2 / 1e4
+RISK_PCT = 0.01
+VP_BIN = 1.0            # bin volume profilu (body ES)
+SESS_ANCHOR = 18 * 60  # 18:00 ET
+WIN_START = 10 * 60    # 10:00 ET (16:00 Czech)
+WIN_END = 16 * 60      # 16:00 ET
+MIN_STOP = 1.0         # min vzdálenost k cíli (body), jinak trade skip
+
+
+class Sim:
+    def __init__(self, tag, mode):
+        self.tag = tag
+        self.mode = mode        # "cont" nebo "rev"
+        self.nav = 100000.0
+        self.pos = 0; self.entry = 0.0; self.stop = 0.0; self.tp = 0.0
+        self.stop_dist = 0.0; self.notional = 0.0; self.risk_dollars = 0.0
+        self.pending = 0
+        self.n = 0; self.wins = 0; self.tp_n = 0; self.sl_n = 0; self.eod_n = 0
+        self.sumR = 0.0; self.sumR2 = 0.0; self.yr = {}
+
+    def close(self, exit_px, kind, year):
+        d = self.pos
+        gross = self.notional * d * (exit_px - self.entry) / self.entry
+        cost = self.notional * COST
+        R = (gross - cost) / self.risk_dollars if self.risk_dollars > 0 else 0.0
+        self.nav += (gross - cost)
+        self.n += 1
+        if (gross - cost) > 0: self.wins += 1
+        if kind == "tp": self.tp_n += 1
+        elif kind == "sl": self.sl_n += 1
+        else: self.eod_n += 1
+        self.sumR += R; self.sumR2 += R * R
+        e = self.yr.setdefault(year, [0, 0.0]); e[0] += 1; e[1] += R
+        self.pos = 0
+
+
+class VwapVp(QCAlgorithm):
+
+    def initialize(self):
+        self.set_start_date(2018, 1, 2)
+        self.set_end_date(2025, 9, 30)
+        self.set_cash(100000)
+        self.set_time_zone(TimeZones.NEW_YORK)
+        self.set_benchmark(lambda t: 0)
+
+        fut = self.add_future(
+            Futures.Indices.SP_500_E_MINI, resolution=Resolution.MINUTE,
+            data_mapping_mode=DataMappingMode.OPEN_INTEREST,
+            data_normalization_mode=DataNormalizationMode.BACKWARDS_RATIO,
+            contract_depth_offset=0, extended_market_hours=True)
+        self.sym = fut.symbol
+        self.consolidate(self.sym, timedelta(minutes=1), self.on1)
+
+        self.sims = [Sim("cont", "cont"), Sim("rev", "rev")]
+        self.skey = None
+        self._reset_session()
+
+    def _reset_session(self):
+        self.sPV = 0.0; self.sV = 0.0; self.sP2V = 0.0
+        self.vp = {}
+        self.traded = False
+        for s in self.sims:
+            s.pending = 0
+
+    def _levels(self):
+        if self.sV <= 0:
+            return None
+        vwap = self.sPV / self.sV
+        var = self.sP2V / self.sV - vwap * vwap
+        std = var ** 0.5 if var > 0 else 0.0
+        up1 = vwap + std; dn1 = vwap - std
+        poc = vah = val = vwap
+        if self.vp:
+            total = sum(self.vp.values())
+            prices = sorted(self.vp)
+            pocp = max(self.vp, key=self.vp.get)
+            i = prices.index(pocp)
+            lo = hi = i; acc = self.vp[pocp]
+            while acc < 0.7 * total and (lo > 0 or hi < len(prices) - 1):
+                left = self.vp[prices[lo - 1]] if lo > 0 else -1
+                right = self.vp[prices[hi + 1]] if hi < len(prices) - 1 else -1
+                if right >= left and hi < len(prices) - 1:
+                    hi += 1; acc += self.vp[prices[hi]]
+                elif lo > 0:
+                    lo -= 1; acc += self.vp[prices[lo]]
+                else:
+                    break
+            poc = pocp; vah = prices[hi]; val = prices[lo]
+        return dict(vwap=vwap, up1=up1, dn1=dn1, poc=poc, vah=vah, val=val)
+
+    def _target(self, lv, entry, d):
+        cands = [lv["vwap"], lv["up1"], lv["dn1"], lv["poc"], lv["vah"], lv["val"]]
+        if d == 1:
+            above = [p for p in cands if p > entry + MIN_STOP]
+            return min(above) if above else None
+        else:
+            below = [p for p in cands if p < entry - MIN_STOP]
+            return max(below) if below else None
+
+    def on1(self, bar):
+        et = bar.end_time
+        em = et.hour * 60 + et.minute
+        d0 = et.date()
+        skey = d0 if em >= SESS_ANCHOR else (d0 - timedelta(days=1))
+        if self.skey != skey:
+            # nová session (18:00 ET): safety close + reset
+            yr = self.skey.year if self.skey else d0.year
+            for s in self.sims:
+                if s.pos != 0:
+                    s.close(bar.open, "eod", yr)
+            self.skey = skey
+            self._reset_session()
+
+        # update VWAP + VP (celá session)
+        p = (bar.high + bar.low + bar.close) / 3.0
+        v = bar.volume
+        if v > 0:
+            self.sPV += p * v; self.sV += v; self.sP2V += p * p * v
+            b = round(p / VP_BIN) * VP_BIN
+            self.vp[b] = self.vp.get(b, 0.0) + v
+
+        lv = self._levels()
+        if lv is None:
+            return
+
+        # 1) fill pending
+        for s in self.sims:
+            if s.pending != 0 and s.pos == 0:
+                d = s.pending; e = bar.open
+                tgt = self._target(lv, e, d)
+                s.pending = 0
+                if tgt is None:
+                    continue
+                sd = abs(tgt - e)
+                if sd < MIN_STOP:
+                    continue
+                s.pos = d; s.entry = e; s.tp = tgt
+                s.stop = e - d * sd; s.stop_dist = sd
+                risk_ret = sd / e
+                s.notional = min(s.nav, RISK_PCT * s.nav / risk_ret)
+                s.risk_dollars = s.notional * risk_ret
+
+        # 2) SL/TP kontrola
+        yr = self.skey.year
+        for s in self.sims:
+            if s.pos != 0:
+                hit_sl = (bar.low <= s.stop) if s.pos == 1 else (bar.high >= s.stop)
+                hit_tp = (bar.high >= s.tp) if s.pos == 1 else (bar.low <= s.tp)
+                if hit_sl:
+                    s.close(s.stop, "sl", yr)
+                elif hit_tp:
+                    s.close(s.tp, "tp", yr)
+
+        # 3) trigger (okno 10:00–16:00 ET, první za session)
+        in_win = WIN_START <= em < WIN_END
+        if in_win and not self.traded:
+            up1, dn1 = lv["up1"], lv["dn1"]
+            fired = False
+            for s in self.sims:
+                if s.pos != 0 or s.pending != 0:
+                    continue
+                d = 0
+                if s.mode == "cont":
+                    if bar.close > up1: d = 1
+                    elif bar.close < dn1: d = -1
+                else:  # rev
+                    if bar.high >= up1: d = -1
+                    elif bar.low <= dn1: d = 1
+                if d != 0:
+                    s.pending = d; fired = True
+            if fired:
+                self.traded = True
+
+        # 4) EOD flat 16:00 ET
+        if em >= WIN_END:
+            for s in self.sims:
+                if s.pos != 0:
+                    s.close(bar.close, "eod", yr)
+            # denní equity sample
+            for s in self.sims:
+                self.plot("equity", s.tag + "_nav", s.nav)
+
+    def on_end_of_algorithm(self):
+        for s in self.sims:
+            mean = s.sumR / s.n if s.n else 0.0
+            self.set_runtime_statistic(s.tag + "_n", str(s.n))
+            self.set_runtime_statistic(s.tag + "_meanR", f"{mean:.4f}")
+            self.set_runtime_statistic(s.tag + "_finalnav", f"{s.nav:.1f}")
+            yrs = ",".join(f"{y}:{s.yr.get(y,[0,0.0])[1]:.3f}" for y in range(2018, 2026))
+            self.log(f"###VV### tag={s.tag} n={s.n} wins={s.wins} tp={s.tp_n} sl={s.sl_n} "
+                     f"eod={s.eod_n} sumR={s.sumR:.4f} sumR2={s.sumR2:.4f} nav={s.nav:.1f} yrs={yrs}")
