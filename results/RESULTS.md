@@ -658,3 +658,9 @@ bt 2a2f2e0c7f8ac33817e66bb9ecf1cd23. Test: drží high-ATR edge (lead z Fáze 1)
 Reverse-engineering diskréčního setupu uživatele. Session VWAP 18:00 ET + ±1σ + VP (POC/VAH/VAL), cíl=nejbližší úroveň, stop 1:1, okno 10:00-16:00 ET, 1/den. QC 34197200, bt b8aa35c3c9f40580d4a5237b7320c515. OOS nedotčeno.
 
 CONT (průraz): n=375, mean net R −0,176, t=−3,34, p=0,001, gross hit 53,1% (nad 50 nesignif.). REV (fade): n=1993, mean net R −0,270, t=−11,73, p<0,001, gross hit 46,0% (hůř než coin flip). Obě záporné každý rok. ZÁVĚR: struktura bez delta gate = záporná/coin-flip → edge uživatele je v order flow readu, ne v úrovních. REV fade aktivně špatný, CONT (co uživatel hraje) coin-flip → jeho výběr strany strukturálně správný. Kolej B (delta gate) = ticková data, další rozhodnutí. Detail: PLAYBOOK_vwap_vp.md.
+
+## PROJEKT 6 — Market Intraday Momentum (Gao et al 2018) na ES, IS
+
+Day-trade: r(9:30-10:00) předpovídá r(15:30-16:00)? Vstup 15:30, výstup 16:00, flat. QC 34201180, bt 5c6f2ada337aaafabf0cb27cb584928e. OOS nedotčeno.
+
+REGRESE r_first→r_last: n=1935, β=−0,0195, corr=−0,018, t=−0,78, p=0,44 → ŽÁDNÁ prediktivní vazba na ES (ne-li slabá reverze). Signály (net_cons, bps/obchod, hit%): first −1,86 (46,7%), pen −0,25 (47,3%), cum −0,81 (47,0%), combo −0,81 (47,6%). Všechny 4 ztrácejí, hit <50%, záporný Sharpe, NAV pod 100k. VERDIKT: NEPODPOŘENO — intraday momentum na ES 2018-2025 neexistuje (dekoval po publikaci; konzistentní s Projektem 2b, kde příbuzná SPY varianta padla na OOS). OOS nedotčeno. Figura results/figures/intraday_mom.png.
