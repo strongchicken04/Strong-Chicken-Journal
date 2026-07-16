@@ -103,3 +103,52 @@ Na ročním RAW gross edge (jádro efektu): **corr(edge, čas) = −0,44; corr(e
 **Poctivý závěr:** data se nejvíc podobají **kombinaci** — bazální vol-režimová závislost (jako u 2b), na kterou se v 2025+ vrství dodatečný pokles nevysvětlený volatilitou. S 8–9 ročními body to nelze rozhodnout tvrdě; vol-hypotéza vysvětluje 2018–2024 dobře a selhává právě na nejnovějším období, což je zároveň období s nejmenším vzorkem.
 
 **Co sledovat dál (jedna věta):** v paper-tradingu / příštím čistém OOS okně sledovat primárně **poměr realizovaného edge k realizované volatilitě** (edge/vol ratio, ne edge samotný) — pokud zůstane hluboko pod úrovní 2018–2024 i v dalším vysokovol období, převáží výklad crowding/decay a strategie se uzavře.
+
+---
+
+## Diagnostika D2 — Monte Carlo + 2D cluster analýza (diagnostika důvěry, žádný nový výběr)
+
+Data: D2 běh 8d579324 (5 bandů net_cons NAV + b=20 trade-level P&L, 5 372 obchodů). Verdikt R3 stojí beze změny; konfigurace zůstává (b=20, VT15).
+
+### A) Monte Carlo bootstrap (b=20 + VT15, net_cons, 10 000 iterací, resampling s replacementem)
+
+**IS (2018→2025-09, 5 047 obchodů):**
+
+| metrika | medián | 5.–95. percentil |
+|---|---|---|
+| CAGR | **+9,7 %** | **+1,2 % … +19,0 %** |
+| Sharpe | +0,74 | +0,15 … +1,30 |
+| MDD† | 22,1 % | 14,5 … 36,0 % |
+
+P(CAGR<0) = **3,2 %**. †MDD z trade-level equity křivky (jemnější granularita než denní — pozorované denní MDD bylo 12,2 %; iid resampling navíc ruší autokorelaci, obojí čti jen orientačně).
+
+**OOS segment (2025-10→2026-04, 325 obchodů):**
+
+| metrika | medián | 5.–95. percentil |
+|---|---|---|
+| total return | **−1,36 %** | **−16,1 % … +17,6 %** |
+| Sharpe | −0,11 | −2,54 … +1,96 |
+
+**P(total > 0) = 44,8 % · P(total < −5 %) = 35,5 % · P(total > +4,7 % IS-implikace) = 28,7 %.**
+
+→ Empirická odpověď na „kolik z −1,33 % je šum": prakticky **celé**. OOS okno je mincovní hod — 45 % bootstrap hmoty je kladných, 29 % dokonce nad IS-implikovanou úrovní. Segment nemá sílu rozlišit „strategie funguje jako IS" od „strategie je mrtvá"; verdikt „nejednoznačné" z R3 je empiricky potvrzený, ne jen analytický.
+
+### B) 2D grid 5×5 (band × VT, net_cons, IS) — Sharpe
+
+| band \ VT | 10 % | 12,5 % | 15 % | 17,5 % | 20 % |
+|---|---|---|---|---|---|
+| 10 bps | 0,42 | 0,40 | 0,38 | 0,39 | 0,40 |
+| 15 bps | 0,52 | 0,49 | 0,45 | 0,44 | 0,44 |
+| **20 bps** | 0,81 | 0,78 | **0,75★** | 0,74 | 0,74 |
+| 25 bps | **1,04** | 0,99 | 0,94 | 0,89 | 0,86 |
+| 30 bps | 0,87 | 0,85 | 0,81 | 0,78 | 0,78 |
+
+(★ = nasazená konfigurace; CAGR/MDD mřížky v `results/vwap_d2_grid.csv`; heatmapa `results/figures/d2_heatmap.png`.)
+
+**Cluster analýza (`scipy.ndimage.label`, 4-connectivity):**
+- Práh Sharpe ≥ 0,5: **jeden souvislý ostrov 16/25 buněk** (celé řádky b=20/25/30 + (15,10)); (20,15) **uvnitř ostrova, na jeho okraji** (soused b=15 je pod prahem).
+- Práh Sharpe ≥ 0,7: **jeden ostrov 15/25** (celé řádky b=20/25/30); (20,15) opět **na okraji** ostrova směrem k menším pásmům.
+
+**Čtení struktury:** (20,15) **NENÍ izolovaný bod** — sedí v jediném velkém souvislém ostrově, který pokrývá 60 % mřížky. Rozhodující dimenze je **pásmo** (b≥20 dobré, b≤15 slabé — ostrá hrana přesně pod nasazenou hodnotou); **VT dimenze je pro Sharpe téměř plochá** (CAGR s VT roste, MDD taky — čistý risk/return trade-off, žádný útes). Hřeben ostrova leží na b=25 (Sharpe 0,94–1,04) — **per guardrail se nic nemění**; b=25 je jen první kandidát na test v příštím čistém OOS okně.
+
+**Závěr (jedna věta):** Parametrická stabilita NENÍ důvod k extra opatrnosti (velký souvislý ostrov, žádný izolát) — ale okrajová pozice (20,15) u hrany b=15 + mincovní OOS bootstrap znamenají: paper-tradovat s běžným (ne zvýšeným) sizingem, rozhodovat podle edge/vol ratio z D1, a počítat s tím, že rozhodné potvrzení/vyvrácení přijde až z delšího období, ne z prvních týdnů.

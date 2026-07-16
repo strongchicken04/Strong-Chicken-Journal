@@ -588,3 +588,8 @@ Obchody: 324 (2,32/den — sedí na IS 2,5), hit 35,8 % (IS 36,9 % — struktura
 ## Diagnostika D1 (Projekt 3) — shrnutí
 
 Rok-po-roce dekompozice Raw / +pásmo / +VT na NQ (tabulka v PLAYBOOK_vwap_trend.md, data results/vwap_d1.csv, backtest 567b6895). Klíč: corr(raw edge, čas)=−0,44; corr(raw edge, vol)=+0,62 (n=8). Pásmo přispívá stabilně (+12 až +46 pp/rok, cost-mitigation nedegraduje); VT plní de-risk roli ve vysokovol letech. 2025+OOS segment dodávají edge hluboko pod vol-implikovanou úroveň (2025: vol 21,4 % ale edge +5,1 % vs 2018: vol 20,1 % → +49 %) → obraz = vol-režimová báze + od 2025 dodatečný pokles nevysvětlený volatilitou; 8–9 bodů nerozhodne. Metrika ke sledování dál: edge/vol ratio.
+
+
+## Diagnostika D2 (Projekt 3) — shrnutí
+
+MC bootstrap (10k, b=20+VT15 net_cons): IS CAGR +9,7 % [+1,2; +19,0], P(CAGR<0)=3,2 %. OOS segment: total −1,36 % [−16,1; +17,6], **P(>0)=44,8 %**, P(<−5 %)=35,5 % → R3 „nejednoznačné" empiricky potvrzeno (mincovní hod). 2D grid 5×5 (band×VT): jeden souvislý ostrov (15–16/25 buněk), (20,15) uvnitř na okraji (hrana b=15 pod ním); VT dimenze plochá, rozhoduje band; hřeben b=25 (Sharpe ~1,0) = kandidát pro příští čisté OOS, nic se teď nemění. Detail: results/vwap_d2_grid.csv, figures/d2_heatmap.png, PLAYBOOK sekce D2. Běh 8d579324.
