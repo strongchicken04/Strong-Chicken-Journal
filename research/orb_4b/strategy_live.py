@@ -13,9 +13,10 @@ import statistics
 #     extended hours). Range = jediná "pre-market" 15-min zóna.
 #   • Breakout = 1-min close VENKU z range (>high long, <low short),
 #     první za den, od 9:30/9:31 dál.
-#   • Vstup: market order (fill ~ open další svíčky).
-#   • Stop-loss = OPAČNÁ strana range (long → range_low, short → range_high).
-#   • Take-profit = 1:1 k riziku (RR × |ref − SL|).
+#   • Vstup: market order po 1-min close mimo range (fill ~ vzápětí).
+#   • Stop-loss = 1.5 bodu ZA opačnou stranou range
+#     (long → range_low − 1.5, short → range_high + 1.5).
+#   • Take-profit = 1.5:1 k riziku (RR × |ref − SL|).
 #   • Volitelný RVOL filtr: objem pre-market zóny / průměr za N dní.
 #   • Max 1 obchod/den, EOD flat 16:00 ET.
 #
@@ -36,7 +37,8 @@ class PreMarketORB(QCAlgorithm):
     RVOL_MIN      = 1.2            # relative-volume filtr (0.0 = vypnuto)
     RVOL_LOOKBACK = 20             # dny pro RVOL baseline
     RISK_PCT      = 0.005          # riziko na obchod jako podíl equity (0.5 %)
-    RR            = 1.0            # take-profit jako násobek rizika (1:1)
+    RR            = 1.5            # take-profit jako násobek rizika (1.5:1)
+    SL_BUFFER     = 1.5            # body ZA opačnou stranou range (NQ)
     # ------------------------------------------------------------------
 
     def initialize(self):
@@ -120,7 +122,7 @@ class PreMarketORB(QCAlgorithm):
         contract = self.fut.mapped
         if contract is None:
             return
-        stop = self.pm_lo if direction == 1 else self.pm_hi
+        stop = (self.pm_lo - self.SL_BUFFER) if direction == 1 else (self.pm_hi + self.SL_BUFFER)
         risk = abs(ref_price - stop)
         if risk <= 0:
             return

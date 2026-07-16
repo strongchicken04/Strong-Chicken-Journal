@@ -1,23 +1,24 @@
 //@version=5
 // =====================================================================
-// PRE-MARKET ORB — 1-min breakout, strukturální stop, 1:1 RR
+// PRE-MARKET ORB — 1-min breakout, 1.5:1 RR
 // Range = 9:15-9:30 ET (před cash-open), breakout na 1-min close.
-// SL = opačná strana range, TP = 1:1. Max 1 obchod/den, EOD flat 16:00.
+// SL = 1.5 bodu ZA opačnou stranou range, TP = 1.5:1. Max 1/den, EOD flat 16:00.
 // Volitelný RVOL filtr (objem pre-market zóny / průměr za N dní).
 //
 // SPUSTIT NA 1-MINUTOVÉM grafu, instrument s pre-market daty
 //   (např. CME_MINI:NQ1! — futures obchodují ~24h, takže 9:15-9:30 mají).
 // Pozn.: default hodnoty NEJSOU ověřený edge (viz výzkum) — čistý základ.
 // =====================================================================
-strategy("Pre-Market ORB 1:1 RR (9:15-9:30 ET)", overlay=true,
+strategy("Pre-Market ORB 1.5:1 RR (9:15-9:30 ET)", overlay=true,
      initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1,
-     pyramiding=0, calc_on_every_tick=false, process_orders_on_close=false,
+     pyramiding=0, calc_on_every_tick=false, process_orders_on_close=true,
      commission_type=strategy.commission.cash_per_order, commission_value=1.0)
 
 // ===== Nastavení =====
 rvolMin   = input.float(1.2, "RVOL filtr (0 = vypnuto)", minval=0.0, step=0.1)
 rvolLen   = input.int(20,  "RVOL lookback (dny)", minval=1)
-rr        = input.float(1.0, "Take-profit = RR × riziko", minval=0.1, step=0.1)
+rr        = input.float(1.5, "Take-profit = RR × riziko", minval=0.1, step=0.1)
+slBuf     = input.float(1.5, "SL buffer (body za koncem range)", minval=0.0, step=0.25)
 useCutoff = input.bool(false, "Omezit vstup jen do 10:30 ET")
 tz        = "America/New_York"
 
@@ -70,18 +71,20 @@ longSig  = canSignal and close > rHi
 shortSig = canSignal and close < rLo
 
 if longSig
-    risk = close - rLo
+    slLong = rLo - slBuf
+    risk = close - slLong
     if risk > 0
         traded := true
         strategy.entry("L", strategy.long)
-        strategy.exit("Lx", from_entry="L", stop=rLo, limit=close + rr * risk)
+        strategy.exit("Lx", from_entry="L", stop=slLong, limit=close + rr * risk)
 
 if shortSig
-    risk = rHi - close
+    slShort = rHi + slBuf
+    risk = slShort - close
     if risk > 0
         traded := true
         strategy.entry("S", strategy.short)
-        strategy.exit("Sx", from_entry="S", stop=rHi, limit=close - rr * risk)
+        strategy.exit("Sx", from_entry="S", stop=slShort, limit=close - rr * risk)
 
 // ===== EOD flat 16:00 =====
 if eod and strategy.position_size != 0
