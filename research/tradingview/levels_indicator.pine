@@ -48,7 +48,7 @@ if newSession
     map.clear(vp)
 bin  = math.round(hlc3 / pocBin) * pocBin
 prev = map.get(vp, bin)
-map.set(vp, bin, (na(prev) ? 0.0 : prev) + volume)
+map.put(vp, bin, (na(prev) ? 0.0 : prev) + volume)
 float best  = -1.0
 float bestk = na
 for k in map.keys(vp)
