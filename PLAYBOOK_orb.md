@@ -95,3 +95,28 @@ Tohle NEjsou úpravy k „doladění" současné strategie (to by byl overfittin
 - Metriky: `results/orb_is.json`. NAV série: `data/cache/orb_nav.csv`. Figura: `results/figures/orb_equity.png`.
 
 **Metodická poznámka:** Krok-0 design note (RR 2:1 → potřeba >67 %) fungoval jako **falzifikovatelná předpověď před během** — a data ji potvrdila. Přesně proto se náročná podmínka pojmenovává předem: výsledek pak není „zklamání", ale čisté ověření hypotézy.
+
+---
+
+## Varianta B (explorativní) — fixní TP 10 bodů, SL = opačná strana OR
+
+**Změna vůči zamrazené spec:** TP = entry ± 10 bodů (fixní), SL = opačná strana 30-min OR (long → OR_low, short → OR_high). Riziko = |entry − opačná strana OR| (mění se se šířkou range). Vše ostatní stejné. Explorativní IS-only, OOS nedotčeno. backtestId `9d05d4329fbbe1c84359695aded49e17`.
+
+| varianta | final NAV (100k) | CAGR | Sharpe | MDD | n | **win %** | TP-of-decided % [CI95] | EOD | mean R |
+|---|---|---|---|---|---|---|---|---|---|
+| ES bez filtru | 79 194 | **−3,0 %** | −0,56 | −24,6 % | 1963 | 63,2 | 68,3 | 295 | −0,020 |
+| ES + filtr | 82 954 | −2,4 % | −0,51 | −22,8 % | 1513 | 62,8 | 68,4 | 239 | −0,022 |
+| NQ bez filtru | 75 698 | **−3,5 %** | −1,04 | −25,7 % | 1929 | **87,9** | **91,2** | 80 | −0,013 |
+| NQ + filtr | 73 790 | −3,9 % | −1,23 | −27,2 % | 1488 | 87,0 | 90,8 | 69 | −0,023 |
+
+**VERDIKT: pořád ztrátové na všech čtyřech — ale méně než varianta A** (A: ES −6,0 % / NQ −4,4 %; B: ES −3,0 % / NQ −3,5 %). Fixní 10-bodový TP se trefuje častěji → mělčí ztráta, ale ne kladná expectancy.
+
+**NQ = učebnicové „picking pennies" (predikce z Kroku potvrzená přesně):** 10 bodů na NQ (~5 bps) se trefí skoro vždy → **win rate 87,9 %, TP-of-decided 91,2 %** — a přesto **−3,5 % CAGR**. Jen 162 SL z 1929 obchodů, ale ty stopy jsou na opačné straně celé NQ range (desítky bodů, ~30–50 bps) → jedna ztráta smaže ~6–10 výher. Mean R gross −0,013. Nejhorší Sharpe ze všech (−1,04) — vysoký win rate = vysoká, ale záporná jistota. **Toto je nejčistší ukázka lekce „win rate ≠ ziskovost" z celého výzkumu** (vedle VWAP TP-gridu, který ukázal opačný pól: nízký win rate + kladná expectancy).
+
+**ES:** win 63 %, TP-of-decided 68,3 % (nad 66,7 %, ale to je breakeven jen pro RR 2:1 — tady je RR proměnlivé). Riziko = plná šířka OR (~15–30 bodů) proti fixnímu 10-bodovému zisku → na širokorozsahových dnech nepříznivé; mean R −0,020 → net záporné.
+
+**News filtr:** opět ES marginálně zlepší (−3,0 → −2,4 %), NQ zhorší (−3,5 → −3,9 %) — **nekonzistentní znaménko = šum** (stejně jako u varianty A).
+
+**Per-year:** 2–4 ziskové roky z 8 (o něco lepší než A, ale žádná varianta ne většinově kladná; 2019/2020/2024 stabilně ztrátové napříč instrumenty).
+
+**Souhrn Projekt 4:** Ani ATR-based (varianta A), ani fixní-TP/range-SL (varianta B) konfigurace 15-min ORB nemá na ES/NQ 2018–2025 kladnou net expectancy. Dvě protilehlé RR geometrie (A: RR 2:1 v neprospěch, nízký win; B: malý fixní TP, vysoký win) skončily obě záporně — směrový edge continuation po 15-min OR průrazu je na těchto indexových futures prakticky nulový. **OOS zůstává nedotčené.** Data varianty B: `results/orb_b_is.json`, `data/cache/orb_b_nav.csv`, figura `results/figures/orb_b_equity.png`.

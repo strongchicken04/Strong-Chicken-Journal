@@ -623,3 +623,16 @@ Zamrazená spec `orb_frozen_assumptions.md` (potvrzeno). OR = high/low prvních 
 | NQ filt | 65920 | −5,2 % | −0,80 | −35,2 % | 1488 | 67,6 % [65,0;70,1] | straddle |
 
 VERDIKT: NEPODPOŘENO. Všechny 4 varianty ztrácejí (CAGR −4,4 až −6,0 %, záporný Sharpe, 1–2 ziskové roky z 8). Binární win rate (TP-of-decided) statisticky nerozeznatelný od 66,7 % breakeven (RR 2:1) → directional edge nulový nad rámec geometrie; po EOD výstupech (~12 %) + nákladech záporná NAV. News filtr nekonzistentní (ES +, NQ −) = šum, nezachrání. Krok-0 design note (potřeba >67 %) potvrzena jako předběžná falzifikovatelná předpověď. OOS ODLOŽENO — NESPOTŘEBOVÁNO (není co validovat). Detail: PLAYBOOK_orb.md.
+
+### PROJEKT 4 — varianta B (fixní TP 10b, SL = opačná strana OR), IS
+
+bt 9d05d4329fbbe1c84359695aded49e17. TP=entry±10b fix, SL=opačná strana 30-min OR, riziko=|entry−OR opp|. Explorativní IS-only, OOS nedotčeno.
+
+| var | finalNAV | CAGR | Sharpe | MDD | n | win% | TP-of-dec% |
+|---|---|---|---|---|---|---|---|
+| ES base | 79194 | −3,0 % | −0,56 | −24,6 % | 1963 | 63,2 | 68,3 |
+| ES filt | 82954 | −2,4 % | −0,51 | −22,8 % | 1513 | 62,8 | 68,4 |
+| NQ base | 75698 | −3,5 % | −1,04 | −25,7 % | 1929 | 87,9 | 91,2 |
+| NQ filt | 73790 | −3,9 % | −1,23 | −27,2 % | 1488 | 87,0 | 90,8 |
+
+VERDIKT: pořád ztrátové (všechny 4), ale mělčí než A. NQ = picking pennies: 87,9% win rate, přesto −3,5% (162 SL = plná range smaže ~6-10 výher). News filtr nekonzistentní (šum). Souhrn P4: ani A (ATR) ani B (fixní TP) nemá kladnou expectancy → 15-min ORB continuation edge na ES/NQ nulový. OOS nedotčeno. Detail: PLAYBOOK_orb.md.
