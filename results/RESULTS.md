@@ -636,3 +636,9 @@ bt 9d05d4329fbbe1c84359695aded49e17. TP=entry±10b fix, SL=opačná strana 30-mi
 | NQ filt | 73790 | −3,9 % | −1,23 | −27,2 % | 1488 | 87,0 | 90,8 |
 
 VERDIKT: pořád ztrátové (všechny 4), ale mělčí než A. NQ = picking pennies: 87,9% win rate, přesto −3,5% (162 SL = plná range smaže ~6-10 výher). News filtr nekonzistentní (šum). Souhrn P4: ani A (ATR) ani B (fixní TP) nemá kladnou expectancy → 15-min ORB continuation edge na ES/NQ nulový. OOS nedotčeno. Detail: PLAYBOOK_orb.md.
+
+### PROJEKT 4 — varianta C (ES grid: zkrácený stop × RR-based TP), IS
+
+bt 4d7be54fd8da19a0b719ab3c33a714e0. SL=s×šířka_OR, TP=m×stop, grid 6×4, net R/obchod. Test příznivého RR (dosud netestováno).
+
+RR trend (avg mean-net-R přes s): m=1→−0,076, m=1.5→−0,067, m=2→−0,049, m=3→−0,029. Širší TP monotónně líp (potvrzeno), ale jen k nule. Jen 3/24 buněk kladné (všechny m=3). Nejlepší s=0.6 m=3: mean +0,0139R, ale t=0,39 p=0,70 (= nula), sousedé záporní (ne ostrov), Sharpe +0,009. VERDIKT: žádný robustní edge; příznivé RR = z „ztrátové" na „~breakeven". Doporučení pokud nutno: s≈0,7 m=3, ale ~nula, NE na OOS. Souhrn P4: ORB continuation na ES/NQ nemá edge v žádné z 3 RR geometrií. OOS nedotčeno. Detail: PLAYBOOK_orb.md.

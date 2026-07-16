@@ -148,3 +148,32 @@ Otázka: existuje frakce vzdálenosti ke stopu, za kterou se trade už skoro nev
 - **NQ:** recovery zůstává **vysoká** hluboko do stopu (>40 % až do 0,52R, >25 % až do 0,68R) — protože TP je jen 8 % R, takže i trade hluboko v mínusu se často „ťukne" zpět o těch pár bodů na TP. → Zkrácení stopu na NQ **spíš škodí** (utne vítěze, co se vraceli); nejlepší k=0,88R je prakticky současný stop, zlepšení nulové.
 
 **Klíčový (přenositelný) závěr:** MAE-based zkrácení stopu pomáhá **jen když je TP dost daleko**, aby se adverse trade nevrátil náhodou (ES). Když je TP mrňavý vůči riziku (NQ picking-pennies), hluboké MAE se pořád vracejí a těsnější stop je kontraproduktivní. **A v OBOU případech i nejlepší zkrácený stop zůstává net záporný** — zmenší to krvácení (ES −0,051 → −0,029), ale strategii to nedělá ziskovou. Data: `data/cache/orb_mae.json`, figura `results/figures/orb_mae.png`.
+
+### Varianta C — ES grid: zkrácený stop × RR-based TP (test příznivého RR)
+
+Motivace: A (2:1 proti) i B (mrňavý TP) byly nepříznivé RR. Zde test **příznivého RR** (jediná nevyzkoušená geometrie): SL = s×šířka_OR, TP = m×stop_dist (RR 1:m). ES, IS, měřeno v net R/obchod. bt `4d7be54fd8da19a0b719ab3c33a714e0`, data `data/cache/orb_grid.json`, heatmapa `results/figures/orb_grid_heatmap.png`.
+
+**RR trend (průměr mean-net-R přes všechna s, dle m) — směrově REÁLNÝ:**
+
+| m (RR 1:m) | breakeven WR | avg mean-net-R |
+|---|---|---|
+| 1.0 | 50 % | −0,0755 |
+| 1.5 | 40 % | −0,0665 |
+| 2.0 | 33 % | −0,0492 |
+| 3.0 | 25 % | **−0,0292** |
+
+→ Širší TP monotónně zlepšuje expectancy (−0,076 → −0,029). **Hypotéza „příznivé RR pomáhá" potvrzena** — pro slabě-směrový continuation chceš široký TP, ne těsný. Velmi těsný stop (s=0,3) je naopak nejhorší (náklad v R roste + noise vystopuje).
+
+**ALE dojede to jen k nule, ne do plusu.** Jen **3 z 24 buněk** mají kladné total net R, všechny na m=3,0:
+
+| buňka | mean net R | t-stat | p | totR | kladných let |
+|---|---|---|---|---|---|
+| **s=0,6 m=3,0 (nejlepší)** | +0,0139 | **+0,39** | **0,70** | +27,4 | 4/8 |
+| s=0,8 m=3,0 | +0,0071 | +0,23 | 0,82 | +13,9 | 4/8 |
+| s=1,0 m=3,0 | +0,0031 | +0,11 | 0,91 | +6,0 | 3/8 |
+
+**Verdikt: žádný robustní edge.** Nejlepší buňka (s=0,6, m=3,0) má **t=0,39, p=0,70** — statisticky **nerozeznatelná od nuly**. Navíc **není to ostrov**: sousedé jsou záporní (s=0,5 m=3 → −0,025; s=0,6 m=2 → −0,010). Kladná buňka bliká kolem nuly mezi zápornými = klasický overfitting podpis, ne stabilní oblast. Per-trade Sharpe nejlepší buňky +0,009 (≈ šum).
+
+**Moje doporučení (na tvou žádost „ideální stop + nejlepší TP"):** Z dat je nejobhajitelnější **s≈0,7 (střed ploché nej-oblasti 0,6–0,8), m=3,0** — tedy stop ~70 % šířky OR a TP = 3× stop. Ale s výslovným závěrem: **je to ~breakeven, ne validovaný edge.** Point estimate +0,007 až +0,014 R/obchod je neodlišitelný od nuly (p≥0,7).
+
+**Rozhodnutí o OOS: NE.** Tohle nepřekračuje laťku pro spotřebování jednorázového OOS okna — dát coin-flip (p=0,70) na precious OOS by bylo plýtvání. Příznivé RR zachránilo ES-ORB z „jasně ztrátové" na „přibližně nula", což je poučné (RR intuice platí), ale ne tradeable. **Souhrn Projektu 4: 15-min ORB continuation na ES/NQ nemá po nákladech kladnou expectancy v žádné ze tří testovaných RR geometrií (A/B/C); nejlepší dosažitelné je ~nula s příznivým RR. OOS nedotčeno.**
