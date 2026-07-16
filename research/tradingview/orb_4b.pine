@@ -59,7 +59,8 @@ if afterOpen and not rangeReady
     rangeReady := true
     base = array.size(pmHist) >= 5 ? array.avg(pmHist) : na
     rvol = (na(base) or base == 0) ? 0.0 : pmVol / base
-    rvolOk := rvolMin <= 0 or rvol >= rvolMin
+    // warmup / vypnuto / splněno → obchoduj (jinak krátká 1-min historie = 0 obchodů)
+    rvolOk := rvolMin <= 0 or na(base) or rvol >= rvolMin
     if not na(pmVol)
         array.push(pmHist, pmVol)
         if array.size(pmHist) > rvolLen

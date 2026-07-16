@@ -92,7 +92,7 @@ class PreMarketORB(QCAlgorithm):
                 rvol = (self.pm_vol / base) if base > 0 else 0.0
                 self.rvol_ok = (self.RVOL_MIN <= 0) or (rvol >= self.RVOL_MIN)
             else:
-                self.rvol_ok = (self.RVOL_MIN <= 0)  # bez historie: jen když filtr vypnutý
+                self.rvol_ok = True  # warmup: nefiltruj (jinak krátká historie = 0 obchodů)
             if self.pm_hi is not None:
                 self.pmvol_hist.append(self.pm_vol)
 
