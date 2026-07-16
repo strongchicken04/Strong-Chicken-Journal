@@ -1,49 +1,52 @@
 //@version=5
 // =====================================================================
-// NQ VWAP Trend (hysterezní pásmo) — Strong Chicken, Projekt 3
+// NQ VWAP Trend (hysterezní pásmo) — Strong Chicken, Projekt 3, v2
 // Věrná implementace zamrazené strategie z r3_frozen_spec.md:
 //   - session VWAP (RTH 9:30–16:00 ET, HLC3 × volume, denní reset)
 //   - hysterezní pásmo b = 20 bps: LONG když close > VWAP×(1+b),
-//     SHORT když close < VWAP×(1−b); pouhý návrat k VWAP nic nespouští
+//     SHORT když close < VWAP×(1−b); návrat k VWAP nic nespouští
 //   - stop-and-reverse: close za OPAČNÝM pásmem = zavřít + otočit
+//     -> v otevřeném trade se SL strana pásma kreslí ČERVENĚ
 //   - EOD: vše flat na close 16:00 ET; žádné overnight pozice
 //
-// DŮLEŽITÉ (ať chart odpovídá backtestu):
-//   * Použij 1-MINUTOVÝ chart NQ (kontinuální kontrakt, např. NQ1!).
-//   * Skript sám filtruje RTH — funguje i na 24h chartu.
-//   * Backtest plnil na OPEN NÁSLEDUJÍCÍ svíčky po signálu — šipka se
-//     kreslí na signální svíčce, vstup ber až od další svíčky.
-//   * Strategie NEMÁ fixní TP/SL: „SL" = červená stop&reverse linka
-//     (opačné pásmo), „TP" = exit na 16:00 close nebo flip.
-//   * Sizing (vol-target 15 %, EWMA20, cap 1×) se dělá na úrovni účtu,
-//     ne na chartu — viz r3_frozen_spec.md §3.
+// POZNÁMKY:
+//   * 1-MINUTOVÝ chart NQ (např. NQ1!). Skript filtruje RTH sám.
+//   * Backtest plnil na OPEN NÁSLEDUJÍCÍ svíčky po signálu.
+//   * Fixní TP neexistuje: exit = flip (červené pásmo) nebo 16:00 ET.
+//   * σ-deviation bandy VWAPu jsou jen VOLITELNÝ KONTEXT (default off)
+//     — strategie je NEPOUŽÍVÁ, SL je fixní 20bps pásmo.
+//   * Sizing VT15 na úrovni účtu (r3_frozen_spec.md §3), ne na chartu.
 // =====================================================================
-indicator("NQ VWAP Trend (b=20bps) — Strong Chicken", overlay=true, max_labels_count=500)
+indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v2", overlay=true, max_labels_count=500)
 
-bandBps   = input.float(20.0, "Hysterezní pásmo (bps)", minval=0.0, step=2.5,
+bandBps    = input.float(20.0, "Hysterezní pásmo (bps)", minval=0.0, step=2.5,
      tooltip="Zamrazená hodnota strategie = 20 bps. Neměň bez nové validace.")
-showBands = input.bool(true,  "Zobrazit pásma VWAP±b")
-showSR    = input.bool(true,  "Zobrazit stop&reverse linku (SL ekvivalent)")
-showInfo  = input.bool(true,  "Info panel")
+showBands  = input.bool(true,  "Zobrazit pásma VWAP±b")
+showSigma  = input.bool(false, "Zobrazit σ-deviation bandy VWAP (±1σ, ±2σ) — jen kontext")
+showInfo   = input.bool(true,  "Info panel")
 
 TZ   = "America/New_York"
 SESS = "0930-1600"
 
-inSess   = not na(time(timeframe.period, SESS, TZ))
-newSess  = inSess and not inSess[1]
-// poslední RTH svíčka na 1-min chartu = open čas 15:59 ET
-eodBar   = inSess and hour(time, TZ) == 15 and minute(time, TZ) == 59
+inSess  = not na(time(timeframe.period, SESS, TZ))
+newSess = inSess and not inSess[1]
+eodBar  = inSess and hour(time, TZ) == 15 and minute(time, TZ) == 59
 
-// ---- session VWAP (RTH-only, HLC3, reset denně) ----
-var float cumPV = na
-var float cumV  = na
+// ---- session VWAP (RTH-only, HLC3, reset denně) + rozptyl pro σ bandy ----
+var float cumPV  = na
+var float cumV   = na
+var float cumPV2 = na
 if newSess
-    cumPV := 0.0
-    cumV  := 0.0
+    cumPV  := 0.0
+    cumV   := 0.0
+    cumPV2 := 0.0
 if inSess
-    cumPV += hlc3 * volume
-    cumV  += volume
+    cumPV  += hlc3 * volume
+    cumV   += volume
+    cumPV2 += hlc3 * hlc3 * volume
 vwap = inSess and cumV > 0 ? cumPV / cumV : na
+varv = inSess and cumV > 0 ? math.max(cumPV2 / cumV - vwap * vwap, 0.0) : na
+sd   = na(varv) ? na : math.sqrt(varv)
 
 b  = bandBps / 10000.0
 up = vwap * (1 + b)
@@ -56,7 +59,7 @@ shortSig = false
 exitSig  = false
 
 if newSess
-    pos := 0   // pojistka (EOD flat už proběhl; half-days)
+    pos := 0
 
 if inSess and not na(vwap)
     if eodBar
@@ -80,14 +83,21 @@ if inSess and not na(vwap)
 
 // ---- vykreslení ----
 plot(vwap, "VWAP (RTH)", color=color.new(color.orange, 0), linewidth=2)
-pUp = plot(showBands ? up : na, "VWAP + b", color=color.new(color.teal, 40))
-pDn = plot(showBands ? dn : na, "VWAP − b", color=color.new(color.teal, 40))
-fill(pUp, pDn, color=color.new(color.teal, 92))
 
-// stop & reverse linka = efektivní SL: pro long je to dolní pásmo, pro short horní
-srLevel = pos == 1 ? dn : pos == -1 ? up : na
-plot(showSR ? srLevel : na, "Stop&Reverse (SL ekv.)",
-     color=color.new(color.red, 0), style=plot.style_linebr, linewidth=2)
+// pásma: neutrální teal, ale SL strana v otevřeném trade ČERVENĚ (tlustě)
+upIsSL = pos == -1   // v shortu je SL horní pásmo
+dnIsSL = pos == 1    // v longu je SL dolní pásmo
+pUp  = plot(showBands ? up : na, "VWAP + b", color=upIsSL ? na : color.new(color.teal, 40))
+pDn  = plot(showBands ? dn : na, "VWAP − b", color=dnIsSL ? na : color.new(color.teal, 40))
+plot(showBands and upIsSL ? up : na, "SL pásmo (short)", color=color.new(color.red, 0), linewidth=3, style=plot.style_linebr)
+plot(showBands and dnIsSL ? dn : na, "SL pásmo (long)",  color=color.new(color.red, 0), linewidth=3, style=plot.style_linebr)
+fill(pUp, pDn, color=color.new(color.teal, 94))
+
+// volitelné σ-deviation bandy (JEN kontext — strategie je nepoužívá)
+plot(showSigma ? vwap + sd     : na, "VWAP +1σ", color=color.new(color.purple, 65))
+plot(showSigma ? vwap - sd     : na, "VWAP −1σ", color=color.new(color.purple, 65))
+plot(showSigma ? vwap + 2 * sd : na, "VWAP +2σ", color=color.new(color.purple, 80))
+plot(showSigma ? vwap - 2 * sd : na, "VWAP −2σ", color=color.new(color.purple, 80))
 
 plotshape(longSig,  "BUY",  shape.triangleup,   location.belowbar, color.new(color.green, 0), size=size.small, text="BUY")
 plotshape(shortSig, "SELL", shape.triangledown, location.abovebar, color.new(color.red, 0),   size=size.small, text="SELL")
@@ -98,11 +108,12 @@ bgcolor(pos == 1 ? color.new(color.green, 94) : pos == -1 ? color.new(color.red,
 // ---- info panel ----
 var table t = table.new(position.top_right, 2, 5, border_width=1)
 if showInfo and barstate.islast
-    table.cell(t, 0, 0, "Pozice",  text_size=size.small), table.cell(t, 1, 0, pos == 1 ? "LONG" : pos == -1 ? "SHORT" : "FLAT", text_size=size.small, text_color=pos == 1 ? color.green : pos == -1 ? color.red : color.gray)
-    table.cell(t, 0, 1, "VWAP",    text_size=size.small), table.cell(t, 1, 1, na(vwap) ? "—" : str.tostring(vwap, format.mintick), text_size=size.small)
-    table.cell(t, 0, 2, "S&R (SL)",text_size=size.small), table.cell(t, 1, 2, na(srLevel) ? "—" : str.tostring(srLevel, format.mintick), text_size=size.small, text_color=color.red)
-    table.cell(t, 0, 3, "TP",      text_size=size.small), table.cell(t, 1, 3, "žádný — exit 16:00 ET / flip", text_size=size.small)
-    table.cell(t, 0, 4, "Sizing",  text_size=size.small), table.cell(t, 1, 4, "VT15 (mimo chart)", text_size=size.small)
+    slLvl = pos == 1 ? dn : pos == -1 ? up : na
+    table.cell(t, 0, 0, "Pozice",   text_size=size.small), table.cell(t, 1, 0, pos == 1 ? "LONG" : pos == -1 ? "SHORT" : "FLAT", text_size=size.small, text_color=pos == 1 ? color.green : pos == -1 ? color.red : color.gray)
+    table.cell(t, 0, 1, "VWAP",     text_size=size.small), table.cell(t, 1, 1, na(vwap) ? "—" : str.tostring(vwap, format.mintick), text_size=size.small)
+    table.cell(t, 0, 2, "SL (S&R)", text_size=size.small), table.cell(t, 1, 2, na(slLvl) ? "—" : str.tostring(slLvl, format.mintick), text_size=size.small, text_color=color.red)
+    table.cell(t, 0, 3, "TP",       text_size=size.small), table.cell(t, 1, 3, "žádný — exit 16:00 ET / flip", text_size=size.small)
+    table.cell(t, 0, 4, "Sizing",   text_size=size.small), table.cell(t, 1, 4, "VT15 (mimo chart)", text_size=size.small)
 
 // ---- alerty ----
 alertcondition(longSig,  "VWAP Trend BUY",      "NQ VWAP Trend: BUY (vstup na open další svíčky)")
