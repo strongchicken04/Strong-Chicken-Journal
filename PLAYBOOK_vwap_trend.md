@@ -152,3 +152,24 @@ P(CAGR<0) = **3,2 %**. †MDD z trade-level equity křivky (jemnější granular
 **Čtení struktury:** (20,15) **NENÍ izolovaný bod** — sedí v jediném velkém souvislém ostrově, který pokrývá 60 % mřížky. Rozhodující dimenze je **pásmo** (b≥20 dobré, b≤15 slabé — ostrá hrana přesně pod nasazenou hodnotou); **VT dimenze je pro Sharpe téměř plochá** (CAGR s VT roste, MDD taky — čistý risk/return trade-off, žádný útes). Hřeben ostrova leží na b=25 (Sharpe 0,94–1,04) — **per guardrail se nic nemění**; b=25 je jen první kandidát na test v příštím čistém OOS okně.
 
 **Závěr (jedna věta):** Parametrická stabilita NENÍ důvod k extra opatrnosti (velký souvislý ostrov, žádný izolát) — ale okrajová pozice (20,15) u hrany b=15 + mincovní OOS bootstrap znamenají: paper-tradovat s běžným (ne zvýšeným) sizingem, rozhodovat podle edge/vol ratio z D1, a počítat s tím, že rozhodné potvrzení/vyvrácení přijde až z delšího období, ne z prvních týdnů.
+
+---
+
+## Diagnostika TP-grid (explorativní, IN-SAMPLE, „jen sranda")
+
+**Otázka (nápad uživatele):** přidat fixní TP = ½ rizika (pohyblivé RR 1:2, „TP je pulka stopu"), protože bez fixního TP je Monte Carlo rozptyl velký. **Test:** fixní TP = `tp_mult × R`, kde `R = |entry − opačné pásmo při entry|`, na zamrazeném pravidle (b=20, NQ, stop&reverse na close, EOD flat), NQ IS 2018-01-02→2025-09-30, OOS **nedotčeno**, net_cons 1,2 bps, TP = resting limit (fill intrabar high/low). backtestId `c194898cc17dcea9c33d7ce4daa77cd4`.
+
+| TP varianta | hit % | trades | CAGR (net_cons) | Sharpe | MDD | final NAV (z 25k) |
+|---|---|---|---|---|---|---|
+| 0,25R | 79,6 % | 11 115 | **−11,3 %** | −1,29 | −62,9 % | 9 915 |
+| **0,5R** (návrh) | 66,3 % | 8 513 | **−6,8 %** | −0,60 | −47,5 % | 14 532 |
+| 1,0R | 51,3 % | 6 656 | **−1,2 %** | −0,04 | −37,5 % | 22 773 |
+| **žádný TP (baseline)** | 36,4 % | 5 051 | **+9,5 %** | +0,59 | −22,4 % | 51 043 |
+
+**Baseline reprodukuje D2 b=20 přesně (+9,5 % CAGR, Sharpe 0,59) → sanity check sedí.**
+
+**VERDIKT: fixní TP edge NIČÍ — monotónně, čím těsnější TP, tím hůř.** Předpověď na záznam („0,5R výrazně zhorší expectancy, propad CAGR o desítky procent relativně") **potvrzena tvrději, než jsem čekal**: 0,5R obrátil kladnou strategii (+9,5 %) na **zápornou (−6,8 %)**, tj. propad o 170 % relativně, ne „desítky %". A křivka je monotónní — 0,25R (−11,3 %) < 0,5R (−6,8 %) < 1,0R (−1,2 %) < baseline (+9,5 %).
+
+**Proč (mechanismus, ne náhoda):** je to **učebnicová ukázka lekce z Projektu 1** obrácená naruby. Hit rate roste přesně opačně než ziskovost — 0,25R má **79,6 % winrate a −11,3 % CAGR**; baseline má **36,4 % winrate a +9,5 % CAGR**. Edge VWAP-trendu **žije ve vzácných dlouhých trendových obchodech** (few big winners, many small losers). Fixní TP = ½R systematicky **usekne pravý ocas** (velké výhry) a nechá běžet ztráty do stop-and-reverse → mění výherní distribuci z „pár velkých / hodně malých" na „hodně malých / pár velkých ztrát" = přesně ta asymetrie, co zabila mean-reversion setupy v Projektu 1. Vysoký winrate je zde **klamavý ukazatel** identickým způsobem.
+
+**Dopad na nasazení: ŽÁDNÝ.** Test byl explorativní IS-only. Nasazená konfigurace zůstává **b=20 + VT15 bez TP**. Žádná TP varianta nejde ani na kandidátní seznam pro příští OOS — všechny jsou IS zamítnuté (žádná nemá kladnou expectancy). Kód: `research/vwap_trend/main.py` (třída `TPGrid`), data `data/cache/tpgrid_nav.csv`, metriky `results/vwap_tpgrid.json`.

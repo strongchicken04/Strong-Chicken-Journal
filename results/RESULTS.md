@@ -593,3 +593,18 @@ Rok-po-roce dekompozice Raw / +pásmo / +VT na NQ (tabulka v PLAYBOOK_vwap_trend
 ## Diagnostika D2 (Projekt 3) — shrnutí
 
 MC bootstrap (10k, b=20+VT15 net_cons): IS CAGR +9,7 % [+1,2; +19,0], P(CAGR<0)=3,2 %. OOS segment: total −1,36 % [−16,1; +17,6], **P(>0)=44,8 %**, P(<−5 %)=35,5 % → R3 „nejednoznačné" empiricky potvrzeno (mincovní hod). 2D grid 5×5 (band×VT): jeden souvislý ostrov (15–16/25 buněk), (20,15) uvnitř na okraji (hrana b=15 pod ním); VT dimenze plochá, rozhoduje band; hřeben b=25 (Sharpe ~1,0) = kandidát pro příští čisté OOS, nic se teď nemění. Detail: results/vwap_d2_grid.csv, figures/d2_heatmap.png, PLAYBOOK sekce D2. Běh 8d579324.
+
+---
+
+## PROJEKT 3 — Diagnostika TP-grid (explorativní, IN-SAMPLE, „jen sranda")
+
+Test nápadu uživatele „fixní TP = ½ stopu (RR 1:2)". Fixní TP = tp_mult×R, R=|entry−opačné pásmo|, na zamrazeném b=20 VWAP-trend pravidle, NQ IS 2018→2025-09-30, OOS nedotčeno, net_cons 1,2 bps. backtestId c194898cc17dcea9c33d7ce4daa77cd4.
+
+| TP | hit% | trades | CAGR net_cons | Sharpe | MDD | final NAV |
+|---|---|---|---|---|---|---|
+| 0,25R | 79,6 | 11115 | −11,3 % | −1,29 | −62,9 % | 9915 |
+| 0,5R | 66,3 | 8513 | −6,8 % | −0,60 | −47,5 % | 14532 |
+| 1,0R | 51,3 | 6656 | −1,2 % | −0,04 | −37,5 % | 22773 |
+| bez TP (baseline) | 36,4 | 5051 | +9,5 % | +0,59 | −22,4 % | 51043 |
+
+VERDIKT: fixní TP monotónně ničí edge (čím těsnější, tím hůř). 0,5R obrátil +9,5 % → −6,8 %. Baseline reprodukuje D2 b=20 (+9,5 %, Sharpe 0,59) → sanity OK. Mechanismus: edge žije ve vzácných dlouhých trendech; fixní TP usekne pravý ocas → klamavě vysoký winrate (0,25R: 79,6 % hit / −11,3 % CAGR) — identická past jako Projekt 1. Dopad na nasazení: žádný (IS-only explorace, deploy zůstává b=20+VT15 bez TP; žádná varianta ani na OOS kandidátní seznam).
