@@ -120,3 +120,16 @@ Tohle NEjsou úpravy k „doladění" současné strategie (to by byl overfittin
 **Per-year:** 2–4 ziskové roky z 8 (o něco lepší než A, ale žádná varianta ne většinově kladná; 2019/2020/2024 stabilně ztrátové napříč instrumenty).
 
 **Souhrn Projekt 4:** Ani ATR-based (varianta A), ani fixní-TP/range-SL (varianta B) konfigurace 15-min ORB nemá na ES/NQ 2018–2025 kladnou net expectancy. Dvě protilehlé RR geometrie (A: RR 2:1 v neprospěch, nízký win; B: malý fixní TP, vysoký win) skončily obě záporně — směrový edge continuation po 15-min OR průrazu je na těchto indexových futures prakticky nulový. **OOS zůstává nedotčené.** Data varianty B: `results/orb_b_is.json`, `data/cache/orb_b_nav.csv`, figura `results/figures/orb_b_equity.png`.
+
+### Varianta B — průměrná velikost stopu (uzavírající datapoint)
+
+Stop = opačná strana 30-min OR; průměr přes všechny obchody (bt `71be46272e93e3d2147c0da04e84f1c6`):
+
+| varianta | prům. stop (body) | prům. stop (%) | TP 10b / stop | efektivní RR | breakeven WR | actual TP-of-dec |
+|---|---|---|---|---|---|---|
+| ES base | 24,31 | 0,551 % | 41,1 % | ~1:2,4 | 70,6 % | 68,3 % → pod |
+| ES filt | 24,13 | 0,548 % | 41,4 % | ~1:2,4 | 70,6 % | 68,4 % → pod |
+| NQ base | 120,77 | 0,820 % | 8,3 % | ~1:12 | 92,3 % | 91,2 % → pod |
+| NQ filt | 119,74 | 0,816 % | 8,4 % | ~1:12 | 92,3 % | 90,8 % → pod |
+
+**Mechanismus záporné expectancy exaktně:** fixní 10-bodový TP je jen **8 % (NQ) resp. 41 % (ES)** průměrné vzdálenosti stopu → efektivní RR silně v neprospěch → breakeven win rate 92 % (NQ) / 71 % (ES). Skutečná úspěšnost je u obou **těsně pod** svým breakevenem → obě ztrácejí. NQ má širší relativní OR (0,82 % vs ES 0,55 %), tedy ještě horší poměr TP/stop → nejvyšší win rate a zároveň nejhorší Sharpe. **Toto je numericky uzavřené vysvětlení picking-pennies charakteru varianty B.**
