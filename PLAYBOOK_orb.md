@@ -133,3 +133,18 @@ Stop = opačná strana 30-min OR; průměr přes všechny obchody (bt `71be46272
 | NQ filt | 119,74 | 0,816 % | 8,4 % | ~1:12 | 92,3 % | 90,8 % → pod |
 
 **Mechanismus záporné expectancy exaktně:** fixní 10-bodový TP je jen **8 % (NQ) resp. 41 % (ES)** průměrné vzdálenosti stopu → efektivní RR silně v neprospěch → breakeven win rate 92 % (NQ) / 71 % (ES). Skutečná úspěšnost je u obou **těsně pod** svým breakevenem → obě ztrácejí. NQ má širší relativní OR (0,82 % vs ES 0,55 %), tedy ještě horší poměr TP/stop → nejvyšší win rate a zároveň nejhorší Sharpe. **Toto je numericky uzavřené vysvětlení picking-pennies charakteru varianty B.**
+
+### Varianta B — MAE analýza (jak hluboko ve stopu je trade ztracený?)
+
+Otázka: existuje frakce vzdálenosti ke stopu, za kterou se trade už skoro nevrací na TP → dala by se tam dát těsnější SL a zmenšit ztráty? Metoda: pro každý obchod změřen MAE (max adverse excursion) jako frakce R = |entry−SL|, histogram 25 binů dle výsledku; recovery křivka `P(nakonec TP | MAE ≥ f)` + counterfactual expectancy pro těsnější stop @ k×R (pozice stejná = „posun stopu dovnitř"). IS, bt `d3b1839e32bf7690b3060441ee7cded2`. **In-sample diagnostika — jakýkoli práh je fitovaný parametr, deploy se nemění.**
+
+| | recovery <40 % od | recovery <25 % od | nejlepší IS stop | mean net R (nejlepší) | baseline |
+|---|---|---|---|---|---|
+| **ES** (TP=10b ≈ 41 % R) | **MAE ≈ 0,24R** | MAE ≈ 0,44R | k ≈ 0,60R | **−0,029** | −0,051 |
+| **NQ** (TP=10b ≈ 8 % R) | MAE ≈ 0,52R | MAE ≈ 0,68R | k ≈ 0,88R | −0,029 | −0,033 |
+
+**Odpověď se liší podle instrumentu — a důvod je poměr TP/R:**
+- **ES:** jakmile je trade ~¼ cesty ke stopu, šance na návrat na TP klesá pod 40 %, za ~½ pod 25 %. Trady, co zajdou ~0,4–0,5R proti, se **skoro nevracejí**. → Zkrácení stopu na ~0,5–0,6R **reálně zlepší expectancy** (−0,051 → −0,029 R/obchod, tj. skoro půlka ztráty pryč). Tvoje intuice na ES **platí**.
+- **NQ:** recovery zůstává **vysoká** hluboko do stopu (>40 % až do 0,52R, >25 % až do 0,68R) — protože TP je jen 8 % R, takže i trade hluboko v mínusu se často „ťukne" zpět o těch pár bodů na TP. → Zkrácení stopu na NQ **spíš škodí** (utne vítěze, co se vraceli); nejlepší k=0,88R je prakticky současný stop, zlepšení nulové.
+
+**Klíčový (přenositelný) závěr:** MAE-based zkrácení stopu pomáhá **jen když je TP dost daleko**, aby se adverse trade nevrátil náhodou (ES). Když je TP mrňavý vůči riziku (NQ picking-pennies), hluboké MAE se pořád vracejí a těsnější stop je kontraproduktivní. **A v OBOU případech i nejlepší zkrácený stop zůstává net záporný** — zmenší to krvácení (ES −0,051 → −0,029), ale strategii to nedělá ziskovou. Data: `data/cache/orb_mae.json`, figura `results/figures/orb_mae.png`.
