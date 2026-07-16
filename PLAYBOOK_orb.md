@@ -20,6 +20,23 @@
 
 ---
 
+## 🏁 ORB RODINA — SOUHRNNÝ VERDIKT (všechny varianty, uzavřeno)
+
+Napříč VŠEMI testovanými podobami ORB na ES/NQ (2018–2025) **žádná nemá po nákladech stabilní kladnou expectancy.** Nejlepší dosažitelné je ~nula, a i ta je tažená jednou volatilní epizodou (2020).
+
+| varianta | popis | verdikt |
+|---|---|---|
+| **A** (15-min ATR) | OR 9:30–10:00, SL 2×ATR, TP 1×ATR | ❌ −4,4 až −6,0 % CAGR; hit na 66,7 % breakevenu |
+| **B** (fixní TP / range stop) | TP 10b, SL = opačná strana OR | ❌ ztrátové; NQ picking-pennies (88 % win, přesto −) |
+| **C** (příznivé RR grid) | zkrácený stop × široký TP, 24 buněk | ⚠️ nejlepší ~nula (t=0,39); žádný robustní ostrov |
+| **4b** (pre-market 1-min + filtry) | range 9:15–9:30, 1-min breakout, 18 filtr-kombinací | ❌ 0/18 kladná; nejlepší nula (p=0,89) |
+| **4b RR1,5 + SL buffer** | RR 1,5:1, SL 1,5b, RVOL≥1,2 | ⚠️ +1 % CAGR IS, ale p=0,49 (statisticky nula) |
+| **4b regime** | condition-first vol/trend režimy + time-stability | ❌ jediný lead (ATR%) = artefakt 2020, nereplikuje se |
+
+**Metodická linka:** postupně jsme vyloučili obě RR geometrie (nepříznivou i příznivou), obě entry rychlosti (15-min i 1-min), pre-i-post-open range, filtry (objem/vol/ATR) i regime-switching. Vždy stejný závěr: **směrový edge breakout-continuation na indexových futures je po realistických nákladech nulový.** Konzistentní s Projekty 1–2b i s nezávislou MNQ falsifikační studií. **OOS okno zůstalo po celou dobu NEDOTČENÉ** — žádná varianta si validaci nezasloužila. To je poctivý negativní výsledek dosažený čistě v IS, bez spálení jednorázového OOS a bez kapitálu.
+
+---
+
 ## 1. Výsledky (IS 2018-01-02 → 2025-09-30, net_cons 1,2 bps)
 
 | varianta | final NAV (z 100k) | CAGR | Sharpe | MDD | n obchodů | obch./den | net-win % | TP % | **TP-of-decided %** | EOD exits | mean R (gross) |
