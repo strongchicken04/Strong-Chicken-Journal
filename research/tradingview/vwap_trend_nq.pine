@@ -5,14 +5,15 @@
 //   - session VWAP (RTH 9:30–16:00 ET, HLC3 × volume, denní reset)
 //   - hysterezní pásmo b = 20 bps: LONG když close > VWAP×(1+b),
 //     SHORT když close < VWAP×(1−b); návrat k VWAP nic nespouští
-//   - stop-and-reverse: close za OPAČNÝM pásmem = zavřít + otočit
-//     -> v otevřeném trade se SL strana pásma kreslí ČERVENĚ
+//   - JEN 1 TRADE/DEN: close za OPAČNÝM pásmem = zavřít (bez otočení),
+//     další vstup až následující den
 //   - EOD: vše flat na close 16:00 ET; žádné overnight pozice
 //
 // POZNÁMKY:
 //   * 1-MINUTOVÝ chart NQ (např. NQ1!). Skript filtruje RTH sám.
 //   * Backtest plnil na OPEN NÁSLEDUJÍCÍ svíčky po signálu.
-//   * Fixní TP neexistuje: exit = flip (červené pásmo) nebo 16:00 ET.
+//   * Exit = close za opačným pásmem nebo 16:00 ET; pak už nový trade
+//     ten den nevznikne (1 trade/den).
 //   * σ-deviation bandy VWAPu jsou jen VOLITELNÝ KONTEXT (default off)
 //     — strategie je NEPOUŽÍVÁ, SL je fixní 20bps pásmo.
 //   * Sizing VT15 na úrovni účtu (r3_frozen_spec.md §3), ne na chartu.
@@ -21,8 +22,8 @@ indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v2", overlay=true, max_lin
 
 bandBps    = input.float(20.0, "Hysterezní pásmo (bps)", minval=0.0, step=2.5,
      tooltip="Zamrazená hodnota strategie = 20 bps. Neměň bez nové validace.")
-tpPoints   = input.float(148.75, "TP vzdálenost (body)", minval=0.0, step=0.25,
-     tooltip="Fixní TP čára = entry ± tato vzdálenost. Pozn.: zamrazená strategie fixní TP NEMÁ (exit = flip/EOD); tohle je vizuální TP.")
+tpPoints   = input.float(74.375, "TP vzdálenost (body)", minval=0.0, step=0.25,
+     tooltip="Fixní TP čára = entry ± tato vzdálenost (poloviční, 74.375 b). Pozn.: zamrazená strategie fixní TP NEMÁ (exit = flip/EOD); tohle je vizuální TP.")
 showBands  = input.bool(true,  "Zobrazit pásma VWAP±b (kontext)")
 showSigma  = input.bool(false, "Zobrazit σ-deviation bandy VWAP (±1σ, ±2σ) — jen kontext")
 showInfo   = input.bool(true,  "Info panel")
@@ -54,14 +55,16 @@ b  = bandBps / 10000.0
 up = vwap * (1 + b)
 dn = vwap * (1 - b)
 
-// ---- poziční stav (přesně dle frozen spec) ----
-var int pos = 0
+// ---- poziční stav (jen 1 trade/den, bez stop-and-reverse) ----
+var int  pos = 0
+var bool tradedToday = false
 longSig  = false
 shortSig = false
 exitSig  = false
 
 if newSess
     pos := 0
+    tradedToday := false
 
 if inSess and not na(vwap)
     if eodBar
@@ -70,18 +73,21 @@ if inSess and not na(vwap)
             pos := 0
     else
         if pos == 0
-            if close > up
-                pos := 1
-                longSig := true
-            else if close < dn
-                pos := -1
-                shortSig := true
+            if not tradedToday                 // jen 1 vstup denně
+                if close > up
+                    pos := 1
+                    longSig := true
+                    tradedToday := true
+                else if close < dn
+                    pos := -1
+                    shortSig := true
+                    tradedToday := true
         else if pos == 1 and close < dn
-            pos := -1
-            shortSig := true    // stop & reverse: long -> short
+            exitSig := true     // zavřít (bez otočení — 1 trade/den)
+            pos := 0
         else if pos == -1 and close > up
-            pos := 1
-            longSig := true     // stop & reverse: short -> long
+            exitSig := true     // zavřít (bez otočení — 1 trade/den)
+            pos := 0
 
 // ---- vykreslení ----
 plot(vwap, "VWAP (RTH)", color=color.new(color.orange, 0), linewidth=2)
