@@ -21,7 +21,9 @@ indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v2", overlay=true, max_lab
 
 bandBps    = input.float(20.0, "Hysterezní pásmo (bps)", minval=0.0, step=2.5,
      tooltip="Zamrazená hodnota strategie = 20 bps. Neměň bez nové validace.")
-showBands  = input.bool(true,  "Zobrazit pásma VWAP±b")
+tpPoints   = input.float(148.75, "TP vzdálenost (body)", minval=0.0, step=0.25,
+     tooltip="Fixní TP čára = entry ± tato vzdálenost. Pozn.: zamrazená strategie fixní TP NEMÁ (exit = flip/EOD); tohle je vizuální TP.")
+showBands  = input.bool(true,  "Zobrazit pásma VWAP±b (kontext)")
 showSigma  = input.bool(false, "Zobrazit σ-deviation bandy VWAP (±1σ, ±2σ) — jen kontext")
 showInfo   = input.bool(true,  "Info panel")
 
@@ -84,14 +86,36 @@ if inSess and not na(vwap)
 // ---- vykreslení ----
 plot(vwap, "VWAP (RTH)", color=color.new(color.orange, 0), linewidth=2)
 
-// pásma: neutrální teal, ale SL strana v otevřeném trade ČERVENĚ (tlustě)
-upIsSL = pos == -1   // v shortu je SL horní pásmo
-dnIsSL = pos == 1    // v longu je SL dolní pásmo
-pUp  = plot(showBands ? up : na, "VWAP + b", color=upIsSL ? na : color.new(color.teal, 40))
-pDn  = plot(showBands ? dn : na, "VWAP − b", color=dnIsSL ? na : color.new(color.teal, 40))
-plot(showBands and upIsSL ? up : na, "SL pásmo (short)", color=color.new(color.red, 0), linewidth=3, style=plot.style_linebr)
-plot(showBands and dnIsSL ? dn : na, "SL pásmo (long)",  color=color.new(color.red, 0), linewidth=3, style=plot.style_linebr)
-fill(pUp, pDn, color=color.new(color.teal, 94))
+// pásma jen jako NEUTRÁLNÍ kontext (SL se už NEkreslí jako pohyblivé pásmo)
+pUp  = plot(showBands ? up : na, "VWAP + b", color=color.new(color.teal, 55))
+pDn  = plot(showBands ? dn : na, "VWAP − b", color=color.new(color.teal, 55))
+fill(pUp, pDn, color=color.new(color.teal, 95))
+
+// ---- SL (pevná čára, zamrazená při vstupu) + TP čára (entry ± tpPoints) ----
+var line   slLine  = na
+var line   tpLine  = na
+var float  entryPx = na
+var float  slFix   = na
+var float  tpFix   = na
+if longSig or shortSig
+    dir     = longSig ? 1 : -1
+    entryPx := close
+    slFix   := dir == 1 ? dn : up          // opačné pásmo v okamžiku vstupu (zamrazené)
+    tpFix   := entryPx + dir * tpPoints
+    if not na(slLine)
+        line.delete(slLine)
+        line.delete(tpLine)
+    slLine  := line.new(bar_index, slFix, bar_index + 1, slFix, extend=extend.right, color=color.new(color.red, 0), width=2)
+    tpLine  := line.new(bar_index, tpFix, bar_index + 1, tpFix, extend=extend.right, color=color.new(color.green, 0), width=2)
+if exitSig
+    if not na(slLine)
+        line.delete(slLine)
+        line.delete(tpLine)
+        slLine  := na
+        tpLine  := na
+        entryPx := na
+        slFix   := na
+        tpFix   := na
 
 // volitelné σ-deviation bandy (JEN kontext — strategie je nepoužívá)
 plot(showSigma ? vwap + sd     : na, "VWAP +1σ", color=color.new(color.purple, 65))
@@ -108,11 +132,10 @@ bgcolor(pos == 1 ? color.new(color.green, 94) : pos == -1 ? color.new(color.red,
 // ---- info panel ----
 var table t = table.new(position.top_right, 2, 5, border_width=1)
 if showInfo and barstate.islast
-    slLvl = pos == 1 ? dn : pos == -1 ? up : na
     table.cell(t, 0, 0, "Pozice",   text_size=size.small), table.cell(t, 1, 0, pos == 1 ? "LONG" : pos == -1 ? "SHORT" : "FLAT", text_size=size.small, text_color=pos == 1 ? color.green : pos == -1 ? color.red : color.gray)
     table.cell(t, 0, 1, "VWAP",     text_size=size.small), table.cell(t, 1, 1, na(vwap) ? "—" : str.tostring(vwap, format.mintick), text_size=size.small)
-    table.cell(t, 0, 2, "SL (S&R)", text_size=size.small), table.cell(t, 1, 2, na(slLvl) ? "—" : str.tostring(slLvl, format.mintick), text_size=size.small, text_color=color.red)
-    table.cell(t, 0, 3, "TP",       text_size=size.small), table.cell(t, 1, 3, "žádný — exit 16:00 ET / flip", text_size=size.small)
+    table.cell(t, 0, 2, "SL (pevný)", text_size=size.small), table.cell(t, 1, 2, na(slFix) ? "—" : str.tostring(slFix, format.mintick), text_size=size.small, text_color=color.red)
+    table.cell(t, 0, 3, "TP",       text_size=size.small), table.cell(t, 1, 3, na(tpFix) ? "—" : str.tostring(tpFix, format.mintick) + "  (±" + str.tostring(tpPoints) + "b)", text_size=size.small, text_color=color.green)
     table.cell(t, 0, 4, "Sizing",   text_size=size.small), table.cell(t, 1, 4, "VT15 (mimo chart)", text_size=size.small)
 
 // ---- alerty ----

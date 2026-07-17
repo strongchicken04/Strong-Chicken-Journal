@@ -1,0 +1,127 @@
+//@version=5
+// =====================================================================
+// ORB INDIKÁTOR (pre-market range) — Strong Chicken, Projekt 4b
+//   Range = high/low 9:15-9:30 ET (před cash-open). Breakout = 1-min
+//   close mimo range (od 9:31). SL = 1.5 bodu ZA opačnou stranou range.
+//   TP = 1.5:1 k riziku. Max 1 obchod/den, EOD flat 16:00 ET.
+//   VIZUÁLNÍ overlay (ne strategie) — kreslí range, vstup, SL a TP čáru.
+// POUŽIJ 1-min chart, ES/NQ futures, extended hours ON.
+// =====================================================================
+indicator("ORB pre-market (range 9:15-9:30) — Strong Chicken", overlay=true, max_lines_count=100, max_labels_count=100)
+
+rr      = input.float(1.5, "TP jako RR × riziko", minval=0.1, step=0.1)
+slBuf   = input.float(1.5, "SL buffer (body za koncem range)", minval=0.0, step=0.25)
+useRvol = input.bool(false, "RVOL filtr ≥ 1.2 (objem 9:15-9:30 vs 20d)")
+tz = "America/New_York"
+GRN = color.new(color.lime, 0)
+RED = color.new(color.red, 0)
+TEAL= color.new(color.teal, 0)
+
+inRange   = not na(time(timeframe.period, "0915-0930", tz))
+afterOpen = not na(time(timeframe.period, "0930-1600", tz))
+eod       = not na(time(timeframe.period, "1559-1600", tz))
+newSess   = (hour(time,tz)==18 and minute(time,tz)==0) and not (hour(time,tz)[1]==18 and minute(time,tz)[1]==0)
+
+// ===== pre-market range 9:15-9:30 =====
+var float rHi = na
+var float rLo = na
+var float pmVol = na
+var bool traded = false
+var bool rangeReady = false
+if inRange and not inRange[1]     // 9:15 start
+    rHi := high
+    rLo := low
+    pmVol := volume
+    rangeReady := false
+    traded := false
+else if inRange
+    rHi := math.max(rHi, high)
+    rLo := math.min(rLo, low)
+    pmVol := pmVol + volume
+
+// RVOL (objem 9:15-9:30 vs průměr 20 dní)
+var float[] pmHist = array.new_float()
+rvolOk = true
+if afterOpen and not rangeReady
+    rangeReady := true
+    base = array.size(pmHist) >= 5 ? array.avg(pmHist) : na
+    rvolOk := (not useRvol) or na(base) or (pmVol / base >= 1.2)
+    if not na(pmVol)
+        array.push(pmHist, pmVol)
+        if array.size(pmHist) > 20
+            array.shift(pmHist)
+
+// ===== breakout + vstup =====
+var int pos = 0
+var float entryPx = na
+var float slLvl = na
+var float tpLvl = na
+var line rHiLine = na
+var line rLoLine = na
+var line slLine = na
+var line tpLine = na
+longSig = false
+shortSig = false
+exitSig = false
+
+// nakresli range čáry po dokončení (9:30)
+if afterOpen and not afterOpen[1] and not na(rHi)
+    if not na(rHiLine)
+        line.delete(rHiLine)
+        line.delete(rLoLine)
+    rHiLine := line.new(bar_index, rHi, bar_index+1, rHi, extend=extend.right, color=TEAL, width=1, style=line.style_dashed)
+    rLoLine := line.new(bar_index, rLo, bar_index+1, rLo, extend=extend.right, color=TEAL, width=1, style=line.style_dashed)
+
+canSig = rangeReady and not traded and rvolOk and pos == 0 and afterOpen and not na(rHi)
+d = 0
+if canSig and close > rHi
+    d := 1
+else if canSig and close < rLo
+    d := -1
+if d != 0
+    traded := true
+    dir = d
+    entryPx := close
+    slLvl := dir == 1 ? (rLo - slBuf) : (rHi + slBuf)
+    risk = math.abs(entryPx - slLvl)
+    tpLvl := entryPx + dir * rr * risk
+    if risk > 0
+        pos := dir
+        longSig := dir == 1
+        shortSig := dir == -1
+        if not na(slLine)
+            line.delete(slLine)
+            line.delete(tpLine)
+        slLine := line.new(bar_index, slLvl, bar_index+1, slLvl, extend=extend.right, color=RED, width=2)
+        tpLine := line.new(bar_index, tpLvl, bar_index+1, tpLvl, extend=extend.right, color=GRN, width=2)
+
+// ===== exit: SL / TP / EOD =====
+if pos != 0
+    hitSL = pos == 1 ? low <= slLvl : high >= slLvl
+    hitTP = pos == 1 ? high >= tpLvl : low <= tpLvl
+    if hitSL or hitTP or eod
+        exitSig := true
+        pos := 0
+
+// reset na 18:00 (nová session) — čisté přes noc
+if newSess
+    if not na(rHiLine)
+        line.delete(rHiLine)
+        line.delete(rLoLine)
+        rHiLine := na
+        rLoLine := na
+    if not na(slLine)
+        line.delete(slLine)
+        line.delete(tpLine)
+        slLine := na
+        tpLine := na
+
+// ===== vizualizace =====
+bgcolor(inRange ? color.new(color.gray, 90) : na, title="pre-market range zóna")
+plotshape(longSig,  "BUY",  shape.triangleup,   location.belowbar, GRN, size=size.small, text="BUY")
+plotshape(shortSig, "SELL", shape.triangledown, location.abovebar, RED, size=size.small, text="SELL")
+plotshape(exitSig,  "EXIT", shape.xcross,       location.abovebar, color.new(color.gray,0), size=size.tiny)
+
+alertcondition(longSig,  "ORB BUY",  "ORB: breakout nahoru")
+alertcondition(shortSig, "ORB SELL", "ORB: breakout dolů")
+alertcondition(exitSig,  "ORB EXIT", "ORB: výstup (SL/TP/EOD)")
