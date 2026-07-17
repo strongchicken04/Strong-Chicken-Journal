@@ -10,8 +10,8 @@
 // =====================================================================
 indicator("OR5 (9:30-9:35) — Strong Chicken", overlay=true, max_lines_count=100, max_labels_count=100)
 
-mode    = input.string("Fade", "Mód", options=["Fade", "Breakout"],
-     tooltip="Fade = reverze na dotek OR5 (datově sedící, Projekt 7). Breakout = průraz OR5 (proti tendenci).")
+mode    = input.string("Break-retest", "Mód", options=["Fade", "Breakout", "Break-retest"],
+     tooltip="Fade = reverze na dotek OR5 (datově sedící, Projekt 7). Breakout = průraz OR5. Break-retest = průraz + návrat na úroveň, pak vstup ve směru průrazu.")
 rr      = input.float(1.5, "TP jako RR × riziko", minval=0.1, step=0.1)
 slBuf   = input.float(1.5, "SL buffer (body za úrovní)", minval=0.0, step=0.25)
 tz = "America/New_York"
@@ -28,10 +28,14 @@ newSess   = (hour(time,tz)==18 and minute(time,tz)==0) and not (hour(time,tz)[1]
 var float rHi = na
 var float rLo = na
 var bool traded = false
+var bool brokeUp = false
+var bool brokeDn = false
 if inOR5 and not inOR5[1]      // 9:30 start
     rHi := high
     rLo := low
     traded := false
+    brokeUp := false
+    brokeDn := false
 else if inOR5
     rHi := math.max(rHi, high)
     rLo := math.min(rLo, low)
@@ -58,20 +62,35 @@ if afterOR5 and not afterOR5[1] and not na(rHi)
 canSig = not na(rHi) and not traded and pos == 0 and afterOR5
 d = 0
 entryPx = close
-if mode == "Breakout"
-    if canSig and close > rHi
-        d := 1
-        slLvl := rLo - slBuf
-    else if canSig and close < rLo
-        d := -1
-        slLvl := rHi + slBuf
-else   // Fade — reverze na dotek OR5 extrému
-    if canSig and high >= rHi
-        d := -1                       // dotek horní hrany → short zpět do range
-        slLvl := rHi + slBuf
-    else if canSig and low <= rLo
-        d := 1                        // dotek dolní hrany → long
-        slLvl := rLo - slBuf
+if canSig
+    if mode == "Breakout"
+        if close > rHi
+            d := 1
+            slLvl := rLo - slBuf
+        else if close < rLo
+            d := -1
+            slLvl := rHi + slBuf
+    else if mode == "Fade"           // reverze na dotek OR5 extrému
+        if high >= rHi
+            d := -1                   // dotek horní hrany → short zpět do range
+            slLvl := rHi + slBuf
+        else if low <= rLo
+            d := 1                    // dotek dolní hrany → long
+            slLvl := rLo - slBuf
+    else                              // Break-retest: průraz + návrat na úroveň
+        // 1) vstup na retest (flag průrazu z předchozích svíček)
+        if brokeUp and low <= rHi
+            d := 1                    // long na retestu horní hrany zdola
+            slLvl := rHi - slBuf
+        else if brokeDn and high >= rLo
+            d := -1                   // short na retestu dolní hrany shora
+            slLvl := rLo + slBuf
+        // 2) zaznamenej průraz (až po kontrole vstupu → žádný retest ve stejné svíčce)
+        if not brokeUp and not brokeDn
+            if close > rHi
+                brokeUp := true
+            else if close < rLo
+                brokeDn := true
 
 if d != 0
     traded := true
