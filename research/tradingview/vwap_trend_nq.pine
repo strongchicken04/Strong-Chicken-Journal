@@ -17,7 +17,7 @@
 //     — strategie je NEPOUŽÍVÁ, SL je fixní 20bps pásmo.
 //   * Sizing VT15 na úrovni účtu (r3_frozen_spec.md §3), ne na chartu.
 // =====================================================================
-indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v2", overlay=true, max_labels_count=500)
+indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v2", overlay=true, max_lines_count=500, max_labels_count=500)
 
 bandBps    = input.float(20.0, "Hysterezní pásmo (bps)", minval=0.0, step=2.5,
      tooltip="Zamrazená hodnota strategie = 20 bps. Neměň bez nové validace.")
@@ -91,31 +91,40 @@ pUp  = plot(showBands ? up : na, "VWAP + b", color=color.new(color.teal, 55))
 pDn  = plot(showBands ? dn : na, "VWAP − b", color=color.new(color.teal, 55))
 fill(pUp, pDn, color=color.new(color.teal, 95))
 
-// ---- SL (pevná čára, zamrazená při vstupu) + TP čára (entry ± tpPoints) ----
+// ---- KRÁTKÉ čáry: ENTRY (modrá) + SL (červená, zamrazená) + TP (zelená, ±tpPoints) ----
+//      rostou entry→exit a ZŮSTÁVAJÍ jako historie trades (žádné mazání, žádné nekonečno)
+var line   enLine  = na
 var line   slLine  = na
 var line   tpLine  = na
+var bool   trActive = false
 var float  entryPx = na
 var float  slFix   = na
 var float  tpFix   = na
+
+// prodluž čáry POUZE aktuálního (živého) trade
+if trActive and not na(slLine)
+    line.set_x2(enLine, bar_index)
+    line.set_x2(slLine, bar_index)
+    line.set_x2(tpLine, bar_index)
+
 if longSig or shortSig
     dir     = longSig ? 1 : -1
     entryPx := close
     slFix   := dir == 1 ? dn : up          // opačné pásmo v okamžiku vstupu (zamrazené)
-    tpFix   := entryPx + dir * tpPoints
-    if not na(slLine)
-        line.delete(slLine)
-        line.delete(tpLine)
-    slLine  := line.new(bar_index, slFix, bar_index + 1, slFix, extend=extend.right, color=color.new(color.red, 0), width=2)
-    tpLine  := line.new(bar_index, tpFix, bar_index + 1, tpFix, extend=extend.right, color=color.new(color.green, 0), width=2)
-if exitSig
-    if not na(slLine)
-        line.delete(slLine)
-        line.delete(tpLine)
-        slLine  := na
-        tpLine  := na
-        entryPx := na
-        slFix   := na
-        tpFix   := na
+    tpFix   := entryPx + dir * tpPoints     // TP přesně ±148.75 bodu (input)
+    enLine  := line.new(bar_index, entryPx, bar_index, entryPx, color=color.new(color.blue, 0),  width=1)
+    slLine  := line.new(bar_index, slFix,   bar_index, slFix,   color=color.new(color.red, 0),   width=2)
+    tpLine  := line.new(bar_index, tpFix,   bar_index, tpFix,   color=color.new(color.green, 0), width=2)
+    trActive := true
+
+if exitSig and not na(slLine)               // dokresli po exit bar, ale NEMAŽ
+    line.set_x2(enLine, bar_index)
+    line.set_x2(slLine, bar_index)
+    line.set_x2(tpLine, bar_index)
+    trActive := false
+    entryPx := na
+    slFix   := na
+    tpFix   := na
 
 // volitelné σ-deviation bandy (JEN kontext — strategie je nepoužívá)
 plot(showSigma ? vwap + sd     : na, "VWAP +1σ", color=color.new(color.purple, 65))
