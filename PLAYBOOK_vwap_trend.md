@@ -179,3 +179,49 @@ P(CAGR<0) = **3,2 %**. †MDD z trade-level equity křivky (jemnější granular
 **Proč (mechanismus, ne náhoda):** je to **učebnicová ukázka lekce z Projektu 1** obrácená naruby. Hit rate roste přesně opačně než ziskovost — 0,25R má **79,6 % winrate a −11,3 % CAGR**; baseline má **36,4 % winrate a +9,5 % CAGR**. Edge VWAP-trendu **žije ve vzácných dlouhých trendových obchodech** (few big winners, many small losers). Fixní TP = ½R systematicky **usekne pravý ocas** (velké výhry) a nechá běžet ztráty do stop-and-reverse → mění výherní distribuci z „pár velkých / hodně malých" na „hodně malých / pár velkých ztrát" = přesně ta asymetrie, co zabila mean-reversion setupy v Projektu 1. Vysoký winrate je zde **klamavý ukazatel** identickým způsobem.
 
 **Dopad na nasazení: ŽÁDNÝ.** Test byl explorativní IS-only. Nasazená konfigurace zůstává **b=20 + VT15 bez TP**. Žádná TP varianta nejde ani na kandidátní seznam pro příští OOS — všechny jsou IS zamítnuté (žádná nemá kladnou expectancy). Kód: `research/vwap_trend/main.py` (třída `TPGrid`), data `data/cache/tpgrid_nav.csv`, metriky `results/vwap_tpgrid.json`.
+
+---
+
+## Poslední verze „1 trade/den" — robustnost + OOS (2026-07-18)
+
+**Varianta (odvozená od zamrazené R3, na žádost uživatele):** NQ, session VWAP RTH 9:30–16:00 ET (HLC3×vol, denní reset), pásmo **b=20 bps**, **JEN 1 vstup/den**, exit = close za opačným pásmem (BEZ otočení) nebo EOD 16:00, fill next open, net_cons 1,2 bps, bez VT. Alternativní mód s reálným TP 74,375 b (½ původního 148,75). Kód: `research/vwap_trend_1td/` (PID 34240773), `research/vwap_trend_robust/` (PID 34242424), `research/vwap_trend_grid2d/` (PID 34243168). Indikátor: `research/tradingview/vwap_trend_nq.pine` (v3, dva módy).
+
+**Obrázky: `results/figures/vwap_trend/` (složka jen s obrázky této strategie).**
+
+### IS výkon (2018-01-02 → 2025-09-30)
+
+| varianta | final NAV | total | CAGR | MDD | trades | win |
+|---|---|---|---|---|---|---|
+| **band-only (nasazená v indikátoru)** | $191 106 | **+89,1 %** | +8,6 % | −17,2 % | 1 946 | 36,9 % |
+| s reálným TP 74,375 b | $121 331 | +21,3 % | +2,4 % | −9,3 % | 1 946 | 46,8 % |
+
+TP znovu potvrzuje lekci TP-gridu: vyšší win-rate, hladší křivka, ale usekává pravý ocas → ~4× nižší výnos. Grid band=20 × TP (viz 2D heatmapa): monotónní gradient TP 40→none = +5 % → +91 %.
+
+![Equity](results/figures/vwap_trend/vwap_trend_1td_equity.png)
+![Equity band vs TP](results/figures/vwap_trend/vwap_trend_1td_equity_both.png)
+
+### OOS (2025-10-01 → 2026-04-18, konec QC dat; okno tímto spotřebováno pro tuto variantu)
+
+Frozen band=20 protažen přes OOS: **+1,29 % za 143 obch. dní** = **30. percentil** IS-bootstrap rozdělení (500 trajektorií). MC oblak: 74 % scénářů kladných; realita kladná, pod mediánem, malý DD (−6,9 %). Konzistentní s R3/D1 obrazem: edge je, ale poslední ~2 roky slabší než IS průměr.
+
+![Fan chart](results/figures/vwap_trend/vwap_robust_fan.png)
+![MC cluster](results/figures/vwap_trend/vwap_robust_cluster.png)
+
+### Parametrická stabilita (overfitting check)
+
+1) **Year × band heatmapa** (8–30 bps × 2018–2025): celá rodina pásem kladná v součtu (IS totály +29 % až +91 %), roční rozptyl velký, žádný band není kladný každý rok.
+
+2) **2D grid band × TP** (12×8 = 96 buněk, `results/vwap_grid2d.csv`): **všech 96 buněk kladných** (min +5 %), široká světlá zóna bandy 16–24 × TP≥180/none (+66 až +91 %). **Nasazená buňka (20, none) = globální maximum mapy** — na hřebeni široké plošiny, NE izolovaný spike v šumu. Podél band osy ale hrbolato (16:+71, 18:+80, 20:+91, 22:+66, 24:+73, 28:+28).
+
+![Year heatmap](results/figures/vwap_trend/vwap_robust_heatmap.png)
+![2D band×TP heatmap](results/figures/vwap_trend/vwap_robust_heatmap2d.png)
+
+### Verdikt
+
+- **Koncept robustní** (plateau, ne spike; celá parametrická rodina kladná; OOS kladné uvnitř kužele očekávání).
+- **Headline +91 % je optimistický konec** — nasazený band=20 sedí přesně na peaku; realistické očekávání = okolí plošiny **~+60–80 % IS total**, a OOS zatím běží u dolního okraje (anualizovaně ~2,5 % vs IS 8,6 %).
+- **Nadále platí:** nižší raw výnos než buy&hold NQ; přidaná hodnota je risk profil (poloviční MDD, žádný overnight, short leg). Slabá místa: nízkovol grind (2019) a violent chop (2020 — 1-trade cap tam škodí, viz níže). Klasifikace: **mírný, risk-managed edge — ne money printer.**
+
+### Poznámka k období 2019 → jaro 2021 (stagnace na equity)
+
+Per-rok band=20: 2018 +11,2 % → **2019 +4,5 % → 2020 −3,3 %** → 2021 +11,6 % (dip Q1, zbytek roku dohnal). Dvě různé příčiny: (a) **2019 = nejnižší realizovaná vol vzorku (11,9 %)** — melt-up bez intradenních trendů, pásmo generuje whipsawy (konzistentní s D1: corr(edge, vol)=+0,62); (b) **2020 = COVID paradox** — obří vol, ale 1-trade cap spálí jediný denní pokus v divokém openu a odpolední trend uteče; stop-and-reverse varianta (bez capu) 2020 vydělala (+13,7 % net) → ztrátu 2020 způsobil právě limit 1/den, ne signál. Plus velká část pohybů 2020 byla overnight/gap (strategie je přes noc flat).

@@ -670,3 +670,7 @@ REGRESE r_first→r_last: n=1935, β=−0,0195, corr=−0,018, t=−0,78, p=0,44
 Mapa, kde cena reaguje víc než náhoda → kde číst order flow. QC 34201573, bt 99afb71544d2931631a9f7b694896126. Kontrola RANDOM = 52,0 %. OOS nedotčeno.
 
 BOUNCE (odraz > náhoda, z>2): OR5L 60,3% (z+4,5, n1736), OR5H 58,4% (z+3,5), sV−2 57,6% (z+2,7), sV+3 62,9% (z+2,4, n154). THROUGH (průraz, z<-2): POC 39,5% (z−7,0, n1986). JAKO NÁHODA: round numbers, PDH/PDL/PDC, overnight, weekly, IB, OR15/30, prior-day VP, SMA, sVWAP. ZÁVĚR: 5-min opening range extrémy = reálné bounce zóny, POC = through/magnet — jasně nad náhodou, obří vzorek. Folklor (round/PDH/PDL/overnight) nereaguje. Není mechanická edge (biasy mírné), je to mapa kam mířit diskréční flow read. Detail: PLAYBOOK_levels.md.
+
+## PROJEKT 3 dodatek — VWAP Trend "1 trade/den" robustnost + OOS (2026-07-18)
+
+Varianta 1td (bez reverzu, band=20, NQ, net_cons). QC 34240773/34242424/34243168. IS 2018→2025-09: +89,1 %, CAGR 8,6 %, MDD −17,2 %, 1946 obch., win 36,9 %; s TP 74,375 jen +21,3 % (TP usekává ocas, monotónní). OOS 2025-10→2026-04 (spotřebováno): +1,29 %/143 dní = 30. pct IS bootstrapu, MC 74 % scénářů kladných. Param stabilita: year×band celá rodina kladná; 2D grid band×TP 96/96 buněk kladných, nasazená (20,none)=globální peak široké plošiny → plateau, ne spike, ale headline optimistický (realisticky +60–80 % IS). Slabiny: 2019 low-vol grind (+4,5 %), 2020 −3,3 % (1-trade cap v chopu; S&R varianta +13,7 %). Figury: results/figures/vwap_trend/. Detail: PLAYBOOK_vwap_trend.md.
