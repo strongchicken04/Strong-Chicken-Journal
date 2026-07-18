@@ -253,3 +253,28 @@ Per-rok band=20: 2018 +11,2 % → **2019 +4,5 % → 2020 −3,3 %** → 2021 +11
 3. Mechanismus koherentní: malý overnight gap = den bez energie = trend-following nemá co chytat; funguje směrově na obou vstupech, plošina prahů, zlepšuje poslední roky.
 4. **Doporučená konfigurace po vylepšení: vstup 9:31 (původní), band=20, 1 obchod/den, gap gate ≥25. klouzavý percentil.** Očekávání: Sharpe ~1,0, CAGR ~9–10 % IS (reálně méně), MDD ~−16 %. Vše IS — potvrdit může jen paper trading / budoucí data.
 5. Zamítnuto cestou: fhr gate, re-entry (t2/t4), posuny vstupu jako samostatné vylepšení. pt60 v záloze jako čistý MDD-tlumič (−7,6 %).
+
+---
+
+## Uzavírací běh vylepšování (Fáze E-improve) — FINÁLNÍ KONFIGURACE (2026-07-18)
+
+QC vwap_trend_improveE (34267822), 6 variant na 9:31 základu, IS-only, sanity base/g25 přesné. Figura `results/figures/vwap_trend/improveE_final.png`.
+
+| varianta | total | CAGR | MDD | Sharpe | win% | dní |
+|---|---|---|---|---|---|---|
+| base | +91,1 % | +8,7 % | −17,2 % | 0,85 | 36,9 % | 1946 |
+| g25 | +102,2 % | +9,5 % | −15,7 % | 1,05 | 37,8 % | 1410 |
+| **g25+pt60 ★** | **+116,7 %** | **+10,5 %** | **−6,4 %** | **1,40** | 39,8 % | 861 |
+| g25 long-only | +65,8 % | +6,7 % | −6,8 % | 0,84 | — | 1204 |
+| g25 short-only | +25,0 % | +2,9 % | −18,3 % | 0,39 | — | 1155 |
+
+**pt60 vrstva: PŘIJATA** — předregistrovaná kritéria splněna s rezervou: MDD −15,7 → **−6,4 %** (zlepšení 9,3 pb, práh byl 3) a total dokonce VYŠŠÍ (+14 % rel., práh byl ne horší než −10 %). Navíc: **kladná ve VŠECH 8 letech** (+18,5/+1,5/+8,8/+10,9/+13,6/+7,7/+15,1/+6,0) — jediná varianta celého výzkumu bez záporného roku; spravila 2020 (+8,8 vs −2,6) i 2025 (+6,0). Cena: vzdává část upside v silných letech (2022: +13,6 vs +20,4) a obchoduje jen ~61 % dní.
+
+**L/S dekompozice (popisná):** obě strany kladné — long +66 %, short +25 %. Short NENÍ mrtvá váha: přidává ~36 pb a diverzifikuje (2018: short +13,6 když long −2,4; 2020 short kladný). Obě strany se ponechávají.
+
+### FINÁLNÍ KONFIGURACE (jde do paper tradingu)
+
+> **NQ, vstup od 9:31, session VWAP RTH, pásmo 20 bps, 1 obchod/den, exit = close za opačným pásmem / EOD 16:00, bez TP. Neobchodovat, když: (a) |overnight gap| < 25. klouzavý percentil 250 dní, NEBO (b) trendovost včerejška |close−open|/(high−low) > 60. klouzavý percentil.**
+> IS čísla: CAGR +10,5 %, Sharpe 1,40, MDD −6,4 %, ~110 obchodů/rok. Realistické očekávání po discountu za ~35 testovaných variant: Sharpe spíš ~1,0, CAGR vysoké jednotky %.
+
+**KAPITOLA VYLEPŠOVÁNÍ UZAVŘENA.** Žádné další IS testy této rodiny; rozhodne paper trading / budoucí data. Indikátor: gap gate zabudován (v4); pt60 gate do indikátoru přidat při nasazení.

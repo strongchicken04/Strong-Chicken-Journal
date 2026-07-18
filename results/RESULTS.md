@@ -678,3 +678,7 @@ Varianta 1td (bez reverzu, band=20, NQ, net_cons). QC 34240773/34242424/34243168
 ## PROJEKT 3 dodatek 2 — Vylepšovací fáze A-D: gap gate (2026-07-18)
 
 QC 34266528/34266984/34267097/34267284, vše IS, klouzavé 250d percentily. Fáze A: H1 šum, H2 nekonzistentní (4/8, Sharpe dolů); condition-first: fhr t=+3,6 nejsilnější. Fáze B: fhr gate SELHAL (monotónně horší), gap20 kandidát (+141 %, Sharpe 1,21). Fáze C: plošina prahů 15-30 pct potvrzena. Fáze D: na původním 9:31 vstupu gap25 = CAGR +0,8 pb (pod prahem +2), Sharpe 0,85→1,05, 5/8 let, 2025 do plusu; velký zisk vyžaduje spike-podezřelý 10:00 vstup. VERDIKT: gap gate ≥25 pct = mírné risk-adjusted vylepšení (doporučeno: 9:31 + gap25), ne game changer. Zamítnuto: fhr gate, re-entry, posuny vstupu. Detail: PLAYBOOK_vwap_trend.md.
+
+## PROJEKT 3 dodatek 3 — uzavírací běh: FINÁLNÍ KONFIGURACE g25+pt60 (2026-07-18)
+
+QC 34267822. pt60 vrstva PŘIJATA (kritéria s rezervou): MDD −15,7→−6,4 % (−9,3 pb), total +14 % rel., Sharpe 1,05→1,40, kladná ve všech 8 letech (jediná varianta výzkumu). L/S dekompozice: long +66 %, short +25 % — short není mrtvá váha, ponechán. FINÁLNÍ KONFIG: 9:31, band20, 1td, bez TP, gap gate ≥25 pct + ptrend gate ≤60 pct (klouzavé 250d). IS: CAGR 10,5 %, Sharpe 1,40, MDD −6,4 %. Kapitola vylepšování UZAVŘENA — soudce = paper trading. Detail: PLAYBOOK_vwap_trend.md.
