@@ -33,11 +33,15 @@ ENTRY_STARTS = [(9 * 60 + 31, "e931"), (9 * 60 + 45, "e945"),
 MAX_TRADES = [1, 2, 4]
 
 
+PLOT_NAV = {"e1000_t4", "e1030_t1", "e1030_t2", "e1030_t4"}
+
+
 class Sim:
     def __init__(self, tag, entry_start, max_trades):
         self.tag = tag
         self.entry_start = entry_start
         self.max_tr = max_trades
+        self.snap = {}
         self.nav = 100000.0
         self.pos = 0
         self.entry = 0.0
@@ -102,7 +106,8 @@ class VwapImproveA(QCAlgorithm):
         """konec dne: zapiš NAV všech sims + podmínky dne."""
         for s in self.sims:
             s.new_day(self.last_close)
-            self.plot("nav", s.tag, s.nav)
+            if s.tag in PLOT_NAV:
+                self.plot("nav", s.tag, s.nav)
         for k, v in self.cond_today.items():
             if v is not None:
                 self.plot("cond", k, v)
@@ -132,6 +137,9 @@ class VwapImproveA(QCAlgorithm):
         if self.cur_date != d:
             if self.cur_date is not None:
                 self._finalize_day()
+            if self.cur_date is None or self.cur_date.year != d.year:
+                for s in self.sims:
+                    s.snap[d.year] = s.nav
             self.cur_date = d
             self.cum_pv = 0.0
             self.cum_v = 0.0
@@ -216,5 +224,7 @@ class VwapImproveA(QCAlgorithm):
     def on_end_of_algorithm(self):
         self._finalize_day()
         for s in self.sims:
-            self.plot("nav", s.tag, s.nav)
-            self.log(f"###IMP### tag={s.tag} nav={s.nav:.1f} n={s.n} wins={s.wins}")
+            if s.tag in PLOT_NAV:
+                self.plot("nav", s.tag, s.nav)
+            snap = "|".join(f"{y}:{v:.1f}" for y, v in sorted(s.snap.items()))
+            self.log(f"###IMP### tag={s.tag} nav={s.nav:.1f} n={s.n} wins={s.wins} snap={snap}")
