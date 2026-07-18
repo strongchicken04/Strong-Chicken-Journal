@@ -674,3 +674,7 @@ BOUNCE (odraz > náhoda, z>2): OR5L 60,3% (z+4,5, n1736), OR5H 58,4% (z+3,5), sV
 ## PROJEKT 3 dodatek — VWAP Trend "1 trade/den" robustnost + OOS (2026-07-18)
 
 Varianta 1td (bez reverzu, band=20, NQ, net_cons). QC 34240773/34242424/34243168. IS 2018→2025-09: +89,1 %, CAGR 8,6 %, MDD −17,2 %, 1946 obch., win 36,9 %; s TP 74,375 jen +21,3 % (TP usekává ocas, monotónní). OOS 2025-10→2026-04 (spotřebováno): +1,29 %/143 dní = 30. pct IS bootstrapu, MC 74 % scénářů kladných. Param stabilita: year×band celá rodina kladná; 2D grid band×TP 96/96 buněk kladných, nasazená (20,none)=globální peak široké plošiny → plateau, ne spike, ale headline optimistický (realisticky +60–80 % IS). Slabiny: 2019 low-vol grind (+4,5 %), 2020 −3,3 % (1-trade cap v chopu; S&R varianta +13,7 %). Figury: results/figures/vwap_trend/. Detail: PLAYBOOK_vwap_trend.md.
+
+## PROJEKT 3 dodatek 2 — Vylepšovací fáze A-D: gap gate (2026-07-18)
+
+QC 34266528/34266984/34267097/34267284, vše IS, klouzavé 250d percentily. Fáze A: H1 šum, H2 nekonzistentní (4/8, Sharpe dolů); condition-first: fhr t=+3,6 nejsilnější. Fáze B: fhr gate SELHAL (monotónně horší), gap20 kandidát (+141 %, Sharpe 1,21). Fáze C: plošina prahů 15-30 pct potvrzena. Fáze D: na původním 9:31 vstupu gap25 = CAGR +0,8 pb (pod prahem +2), Sharpe 0,85→1,05, 5/8 let, 2025 do plusu; velký zisk vyžaduje spike-podezřelý 10:00 vstup. VERDIKT: gap gate ≥25 pct = mírné risk-adjusted vylepšení (doporučeno: 9:31 + gap25), ne game changer. Zamítnuto: fhr gate, re-entry, posuny vstupu. Detail: PLAYBOOK_vwap_trend.md.

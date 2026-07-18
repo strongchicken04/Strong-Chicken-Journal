@@ -225,3 +225,31 @@ Frozen band=20 protažen přes OOS: **+1,29 % za 143 obch. dní** = **30. percen
 ### Poznámka k období 2019 → jaro 2021 (stagnace na equity)
 
 Per-rok band=20: 2018 +11,2 % → **2019 +4,5 % → 2020 −3,3 %** → 2021 +11,6 % (dip Q1, zbytek roku dohnal). Dvě různé příčiny: (a) **2019 = nejnižší realizovaná vol vzorku (11,9 %)** — melt-up bez intradenních trendů, pásmo generuje whipsawy (konzistentní s D1: corr(edge, vol)=+0,62); (b) **2020 = COVID paradox** — obří vol, ale 1-trade cap spálí jediný denní pokus v divokém openu a odpolední trend uteče; stop-and-reverse varianta (bez capu) 2020 vydělala (+13,7 % net) → ztrátu 2020 způsobil právě limit 1/den, ne signál. Plus velká část pohybů 2020 byla overnight/gap (strategie je přes noc flat).
+
+---
+
+## Vylepšovací fáze A–D (1td varianta) — gap gate (2026-07-18)
+
+**Pre-registrovaná kritéria:** IS-only (OOS spotřebováno, soudce = paper trading); condition-first; vylepšení = CAGR +2 pb NEBO výrazně nižší MDD, konzistence ≥5/8 let head-to-head, soudržnost sousedů. QC projekty: improve A 34266528, B 34266984, C 34267097, D 34267284. Figury `results/figures/vwap_trend/improve*.png`.
+
+**Fáze A (grid 12: vstup 9:31/9:45/10:00/10:30 × max 1/2/4 obchody + denní podmínky):** H2 re-entry zvedá totály, ale head-to-head jen 4/8 let a Sharpe klesá (0,85→0,67–0,81) → NESPLNIL. H1 posun vstupu = šum (t1 řádek 191/166/201/142k); e1000_t1 (Sharpe 0,89, MDD −11,9 %) podezřelý spike (sousedi špatní). Condition-first: fhr (range 9:30–10:00) Q4–Q5 +6 až +16 bps/den (t=+3,6) = nejsilnější signál; gap mírný (Q1 záporný); ptrend slabě inverzní; rv20/or5r nic.
+
+**Fáze B (gaty, klouzavý 250d percentil bez lookaheadu, base = vstup 10:00):** fhr gate — hlavní kandidát — SELHAL (monotónně horší: 40/50/60 pct → +91/+72/+62 % vs base +101 %); kvintilový signál se jako filtr nepřenesl. gap20 (vynech spodních 20 % overnight gapů): +141 %, Sharpe 1,21, 6/8 let. pt60: stejný total, MDD −7,5 % (risk-tlumič).
+
+**Fáze C (sweep gap prahu):** plošina 15–30. pct potvrzena (+119 až +141 %, Sharpe 1,07–1,25, h2h 5–7/8); kraje logické (10 nebinduje, 40 řeže dobré dny). g20p60: Sharpe 1,27, MDD −7,6 % (defenzivní). ŽÁDNÝ spike.
+
+**Fáze D (nezávislost na vstupu — gate na původním 9:31):** sanity obou bází přesné. Výsledek:
+
+| varianta | total | CAGR | MDD | Sharpe | h2h | 2025 |
+|---|---|---|---|---|---|---|
+| e931 base | +91,1 % | +8,7 % | −17,2 % | 0,85 | — | −1,0 |
+| **e931+gap25** | +102,2 % | +9,5 % | −15,7 % | **1,05** | 5/8 | **+4,1** |
+| e1000 base | +100,7 % | +9,4 % | −11,9 % | 0,89 | — | −8,3 |
+| e1000+gap25 | +129,6 % | +11,3 % | −11,3 % | 1,19 | 6/8 | −3,4 |
+
+**FINÁLNÍ VERDIKT (poctivý):**
+1. **Gap gate ≥25. pct je reálné, ale MÍRNÉ vylepšení.** Na původním vstupu 9:31: CAGR jen +0,8 pb (POD naším prahem +2 pb), ale Sharpe 0,85→1,05, h2h 5/8, a **2025 otočeno do plusu na obou větvích** (přesně období decay obav). Klasifikace: **risk-adjusted vylepšení, ne výnosový game changer.**
+2. **Headline +141 % z Fáze B/C vyžaduje vstup 10:00, který zůstává spike-podezřelý** (nefiltrovaní sousedi 9:45/10:30 špatní). Nenasazovat jako očekávání.
+3. Mechanismus koherentní: malý overnight gap = den bez energie = trend-following nemá co chytat; funguje směrově na obou vstupech, plošina prahů, zlepšuje poslední roky.
+4. **Doporučená konfigurace po vylepšení: vstup 9:31 (původní), band=20, 1 obchod/den, gap gate ≥25. klouzavý percentil.** Očekávání: Sharpe ~1,0, CAGR ~9–10 % IS (reálně méně), MDD ~−16 %. Vše IS — potvrdit může jen paper trading / budoucí data.
+5. Zamítnuto cestou: fhr gate, re-entry (t2/t4), posuny vstupu jako samostatné vylepšení. pt60 v záloze jako čistý MDD-tlumič (−7,6 %).
