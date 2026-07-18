@@ -1,31 +1,39 @@
 //@version=5
 // =====================================================================
-// NQ VWAP Trend (hysterezní pásmo) — Strong Chicken, Projekt 3, v2
-// Věrná implementace zamrazené strategie z r3_frozen_spec.md:
-//   - session VWAP (RTH 9:30–16:00 ET, HLC3 × volume, denní reset)
-//   - hysterezní pásmo b = 20 bps: LONG když close > VWAP×(1+b),
-//     SHORT když close < VWAP×(1−b); návrat k VWAP nic nespouští
-//   - JEN 1 TRADE/DEN: exit = TP (intrabar dotek), close za OPAČNÝM
-//     pásmem (bez otočení), nebo 16:00 ET; další vstup až další den
-//   - EOD: vše flat na close 16:00 ET; žádné overnight pozice
+// NQ VWAP Trend (hysterezní pásmo) — Strong Chicken, Projekt 3, v3
+// Strategie: session VWAP (RTH 9:30–16:00 ET, HLC3 × volume, denní
+// reset), hysterezní pásmo b = 20 bps, JEN 1 TRADE/DEN, EOD flat 16:00.
+//
+// DVA MÓDY EXITU (přepínač v nastavení):
+//   * "TP (fixní cíl)"  = exit na TP entry ± 74.375 b (intrabar dotek),
+//     nebo close za opačným pásmem, nebo EOD. Kreslí KRÁTKÉ čáry
+//     entry/SL/TP (historie trades) + zelený diamant "TP" při zásahu.
+//     -> vyšší win-rate, hladší křivka, nižší celkový výnos.
+//   * "Pásmo (bez TP)"  = ŽÁDNÝ TP; exit až close za opačným pásmem
+//     nebo EOD. Nekreslí čáry — místo toho se SL strana pásma barví
+//     ČERVENĚ po dobu otevřeného trade. Vítězové běží.
+//     -> historicky vyšší celkový výnos (band-only varianta).
 //
 // POZNÁMKY:
 //   * 1-MINUTOVÝ chart NQ (např. NQ1!). Skript filtruje RTH sám.
 //   * Backtest plnil na OPEN NÁSLEDUJÍCÍ svíčky po signálu.
-//   * TP = entry ± tpPoints; dotek high/low = REÁLNÝ exit (marker TP).
-//   * σ-deviation bandy VWAPu jsou jen VOLITELNÝ KONTEXT (default off)
-//     — strategie je NEPOUŽÍVÁ, SL je fixní 20bps pásmo.
+//   * Exit markery u každého tradu: zelený diamant TP / šedý křížek EXIT.
+//   * σ-deviation bandy VWAPu jsou jen VOLITELNÝ KONTEXT (default off).
 //   * Sizing VT15 na úrovni účtu (r3_frozen_spec.md §3), ne na chartu.
 // =====================================================================
-indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v2", overlay=true, max_lines_count=500, max_labels_count=500)
+indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v3", overlay=true, max_lines_count=500, max_labels_count=500)
 
+mode       = input.string("TP (fixní cíl)", "Mód exitu", options=["TP (fixní cíl)", "Pásmo (bez TP)"],
+     tooltip="TP = fixní cíl ±74.375 b, vyšší win-rate, hladší. Pásmo = bez TP, exit až za opačným pásmem — nechává běžet vítěze (historicky vyšší výnos). EOD flat vždy.")
 bandBps    = input.float(20.0, "Hysterezní pásmo (bps)", minval=0.0, step=2.5,
      tooltip="Zamrazená hodnota strategie = 20 bps. Neměň bez nové validace.")
-tpPoints   = input.float(74.375, "TP vzdálenost (body)", minval=0.0, step=0.25,
-     tooltip="TP = entry ± tato vzdálenost (poloviční, 74.375 b). Dotek TP = reálný exit trade.")
-showBands  = input.bool(true,  "Zobrazit pásma VWAP±b (kontext)")
+tpPoints   = input.float(74.375, "TP vzdálenost (body) — jen mód TP", minval=0.0, step=0.25,
+     tooltip="TP = entry ± tato vzdálenost (poloviční, 74.375 b). Dotek TP = reálný exit trade. V módu Pásmo se nepoužívá.")
+showBands  = input.bool(true,  "Zobrazit pásma VWAP±b")
 showSigma  = input.bool(false, "Zobrazit σ-deviation bandy VWAP (±1σ, ±2σ) — jen kontext")
 showInfo   = input.bool(true,  "Info panel")
+
+useTP = mode == "TP (fixní cíl)"
 
 TZ   = "America/New_York"
 SESS = "0930-1600"
@@ -54,7 +62,7 @@ b  = bandBps / 10000.0
 up = vwap * (1 + b)
 dn = vwap * (1 - b)
 
-// ---- poziční stav (jen 1 trade/den; exit = TP / opačné pásmo / EOD) ----
+// ---- poziční stav (jen 1 trade/den; exit dle módu) ----
 var int   pos = 0
 var bool  tradedToday = false
 var float entryPx = na
@@ -63,7 +71,7 @@ var float tpFix   = na
 longSig  = false
 shortSig = false
 exitSig  = false          // exit na opačném pásmu nebo EOD
-tpSig    = false          // exit na TP (intrabar dotek)
+tpSig    = false          // exit na TP (jen mód TP)
 
 if newSess
     pos := 0
@@ -86,9 +94,9 @@ if inSess and not na(vwap)
                     shortSig := true
                     tradedToday := true
         else
-            tpHit = not na(tpFix) and (pos == 1 ? high >= tpFix : low <= tpFix)
+            tpHit = useTP and not na(tpFix) and (pos == 1 ? high >= tpFix : low <= tpFix)
             if tpHit
-                tpSig := true   // TP dotek = reálný exit
+                tpSig := true   // TP dotek = reálný exit (jen mód TP)
                 pos := 0
             else if pos == 1 and close < dn
                 exitSig := true  // zavřít (bez otočení — 1 trade/den)
@@ -100,13 +108,14 @@ if inSess and not na(vwap)
 // ---- vykreslení ----
 plot(vwap, "VWAP (RTH)", color=color.new(color.orange, 0), linewidth=2)
 
-// pásma jen jako NEUTRÁLNÍ kontext (SL se už NEkreslí jako pohyblivé pásmo)
-pUp  = plot(showBands ? up : na, "VWAP + b", color=color.new(color.teal, 55))
-pDn  = plot(showBands ? dn : na, "VWAP − b", color=color.new(color.teal, 55))
+// pásma: v módu Pásmo se SL strana barví ČERVENĚ po dobu otevřeného trade
+slUpActive = not useTP and pos == -1     // short -> SL = horní pásmo
+slDnActive = not useTP and pos == 1      // long  -> SL = dolní pásmo
+pUp  = plot(showBands ? up : na, "VWAP + b", color=slUpActive ? color.new(color.red, 20) : color.new(color.teal, 55), linewidth=slUpActive ? 2 : 1)
+pDn  = plot(showBands ? dn : na, "VWAP − b", color=slDnActive ? color.new(color.red, 20) : color.new(color.teal, 55), linewidth=slDnActive ? 2 : 1)
 fill(pUp, pDn, color=color.new(color.teal, 95))
 
-// ---- KRÁTKÉ čáry: ENTRY (modrá) + SL (červená, zamrazená) + TP (zelená, ±tpPoints) ----
-//      rostou entry→exit a ZŮSTÁVAJÍ jako historie trades (žádné mazání, žádné nekonečno)
+// ---- KRÁTKÉ čáry entry/SL/TP — JEN v módu TP (historie trades, nemažou se) ----
 var line   enLine  = na
 var line   slLine  = na
 var line   tpLine  = na
@@ -118,7 +127,7 @@ if trActive and not na(slLine)
     line.set_x2(slLine, bar_index)
     line.set_x2(tpLine, bar_index)
 
-if longSig or shortSig
+if (longSig or shortSig) and useTP
     dir     = longSig ? 1 : -1
     entryPx := close
     slFix   := dir == 1 ? dn : up          // opačné pásmo v okamžiku vstupu (zamrazené)
@@ -143,6 +152,7 @@ plot(showSigma ? vwap - sd     : na, "VWAP −1σ", color=color.new(color.purple
 plot(showSigma ? vwap + 2 * sd : na, "VWAP +2σ", color=color.new(color.purple, 80))
 plot(showSigma ? vwap - 2 * sd : na, "VWAP −2σ", color=color.new(color.purple, 80))
 
+// vstupy + výstupy u KAŽDÉHO trade (oba módy)
 plotshape(longSig,  "BUY",  shape.triangleup,   location.belowbar, color.new(color.green, 0), size=size.small, text="BUY")
 plotshape(shortSig, "SELL", shape.triangledown, location.abovebar, color.new(color.red, 0),   size=size.small, text="SELL")
 plotshape(tpSig,    "TP EXIT", shape.diamond,   location.abovebar, color.new(color.green, 0), size=size.small, text="TP")
@@ -151,13 +161,15 @@ plotshape(exitSig,  "EXIT", shape.xcross,       location.abovebar, color.new(col
 bgcolor(pos == 1 ? color.new(color.green, 94) : pos == -1 ? color.new(color.red, 94) : na)
 
 // ---- info panel ----
-var table t = table.new(position.top_right, 2, 5, border_width=1)
+slShow = useTP ? slFix : (pos == 1 ? dn : pos == -1 ? up : na)
+var table t = table.new(position.top_right, 2, 6, border_width=1)
 if showInfo and barstate.islast
-    table.cell(t, 0, 0, "Pozice",   text_size=size.small), table.cell(t, 1, 0, pos == 1 ? "LONG" : pos == -1 ? "SHORT" : "FLAT", text_size=size.small, text_color=pos == 1 ? color.green : pos == -1 ? color.red : color.gray)
-    table.cell(t, 0, 1, "VWAP",     text_size=size.small), table.cell(t, 1, 1, na(vwap) ? "—" : str.tostring(vwap, format.mintick), text_size=size.small)
-    table.cell(t, 0, 2, "SL (pevný)", text_size=size.small), table.cell(t, 1, 2, na(slFix) ? "—" : str.tostring(slFix, format.mintick), text_size=size.small, text_color=color.red)
-    table.cell(t, 0, 3, "TP",       text_size=size.small), table.cell(t, 1, 3, na(tpFix) ? "—" : str.tostring(tpFix, format.mintick) + "  (±" + str.tostring(tpPoints) + "b)", text_size=size.small, text_color=color.green)
-    table.cell(t, 0, 4, "Sizing",   text_size=size.small), table.cell(t, 1, 4, "VT15 (mimo chart)", text_size=size.small)
+    table.cell(t, 0, 0, "Mód",      text_size=size.small), table.cell(t, 1, 0, useTP ? "TP" : "Pásmo", text_size=size.small)
+    table.cell(t, 0, 1, "Pozice",   text_size=size.small), table.cell(t, 1, 1, pos == 1 ? "LONG" : pos == -1 ? "SHORT" : "FLAT", text_size=size.small, text_color=pos == 1 ? color.green : pos == -1 ? color.red : color.gray)
+    table.cell(t, 0, 2, "VWAP",     text_size=size.small), table.cell(t, 1, 2, na(vwap) ? "—" : str.tostring(vwap, format.mintick), text_size=size.small)
+    table.cell(t, 0, 3, useTP ? "SL (pevný)" : "SL (pásmo)", text_size=size.small), table.cell(t, 1, 3, na(slShow) ? "—" : str.tostring(slShow, format.mintick), text_size=size.small, text_color=color.red)
+    table.cell(t, 0, 4, "TP",       text_size=size.small), table.cell(t, 1, 4, not useTP ? "— (mód Pásmo)" : na(tpFix) ? "—" : str.tostring(tpFix, format.mintick) + "  (±" + str.tostring(tpPoints) + "b)", text_size=size.small, text_color=color.green)
+    table.cell(t, 0, 5, "Sizing",   text_size=size.small), table.cell(t, 1, 5, "VT15 (mimo chart)", text_size=size.small)
 
 // ---- alerty ----
 alertcondition(longSig,  "VWAP Trend BUY",      "NQ VWAP Trend: BUY (vstup na open další svíčky)")
