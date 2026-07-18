@@ -114,8 +114,8 @@ slUpActive = not useTP and pos == -1     // short -> SL = horní pásmo
 slDnActive = not useTP and pos == 1      // long  -> SL = dolní pásmo
 tpUpActive = not useTP and pos == 1      // long  -> zelená = horní pásmo
 tpDnActive = not useTP and pos == -1     // short -> zelená = dolní pásmo
-pUp  = plot(showBands ? up : na, "VWAP + b", color=slUpActive ? color.new(color.red, 20) : tpUpActive ? color.new(color.green, 20) : color.new(color.teal, 55), linewidth=slUpActive or tpUpActive ? 2 : 1)
-pDn  = plot(showBands ? dn : na, "VWAP − b", color=slDnActive ? color.new(color.red, 20) : tpDnActive ? color.new(color.green, 20) : color.new(color.teal, 55), linewidth=slDnActive or tpDnActive ? 2 : 1)
+pUp  = plot(showBands ? up : na, "VWAP + b", color=slUpActive ? color.new(color.red, 20) : tpUpActive ? color.new(color.green, 20) : color.new(color.teal, 55), linewidth=2)
+pDn  = plot(showBands ? dn : na, "VWAP − b", color=slDnActive ? color.new(color.red, 20) : tpDnActive ? color.new(color.green, 20) : color.new(color.teal, 55), linewidth=2)
 fill(pUp, pDn, color=color.new(color.teal, 95))
 
 // ---- KRÁTKÉ čáry entry/SL/TP — JEN v módu TP (historie trades, nemažou se) ----
