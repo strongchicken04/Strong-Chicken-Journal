@@ -5,15 +5,14 @@
 //   - session VWAP (RTH 9:30–16:00 ET, HLC3 × volume, denní reset)
 //   - hysterezní pásmo b = 20 bps: LONG když close > VWAP×(1+b),
 //     SHORT když close < VWAP×(1−b); návrat k VWAP nic nespouští
-//   - JEN 1 TRADE/DEN: close za OPAČNÝM pásmem = zavřít (bez otočení),
-//     další vstup až následující den
+//   - JEN 1 TRADE/DEN: exit = TP (intrabar dotek), close za OPAČNÝM
+//     pásmem (bez otočení), nebo 16:00 ET; další vstup až další den
 //   - EOD: vše flat na close 16:00 ET; žádné overnight pozice
 //
 // POZNÁMKY:
 //   * 1-MINUTOVÝ chart NQ (např. NQ1!). Skript filtruje RTH sám.
 //   * Backtest plnil na OPEN NÁSLEDUJÍCÍ svíčky po signálu.
-//   * Exit = close za opačným pásmem nebo 16:00 ET; pak už nový trade
-//     ten den nevznikne (1 trade/den).
+//   * TP = entry ± tpPoints; dotek high/low = REÁLNÝ exit (marker TP).
 //   * σ-deviation bandy VWAPu jsou jen VOLITELNÝ KONTEXT (default off)
 //     — strategie je NEPOUŽÍVÁ, SL je fixní 20bps pásmo.
 //   * Sizing VT15 na úrovni účtu (r3_frozen_spec.md §3), ne na chartu.
@@ -23,7 +22,7 @@ indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v2", overlay=true, max_lin
 bandBps    = input.float(20.0, "Hysterezní pásmo (bps)", minval=0.0, step=2.5,
      tooltip="Zamrazená hodnota strategie = 20 bps. Neměň bez nové validace.")
 tpPoints   = input.float(74.375, "TP vzdálenost (body)", minval=0.0, step=0.25,
-     tooltip="Fixní TP čára = entry ± tato vzdálenost (poloviční, 74.375 b). Pozn.: zamrazená strategie fixní TP NEMÁ (exit = flip/EOD); tohle je vizuální TP.")
+     tooltip="TP = entry ± tato vzdálenost (poloviční, 74.375 b). Dotek TP = reálný exit trade.")
 showBands  = input.bool(true,  "Zobrazit pásma VWAP±b (kontext)")
 showSigma  = input.bool(false, "Zobrazit σ-deviation bandy VWAP (±1σ, ±2σ) — jen kontext")
 showInfo   = input.bool(true,  "Info panel")
@@ -55,12 +54,16 @@ b  = bandBps / 10000.0
 up = vwap * (1 + b)
 dn = vwap * (1 - b)
 
-// ---- poziční stav (jen 1 trade/den, bez stop-and-reverse) ----
-var int  pos = 0
-var bool tradedToday = false
+// ---- poziční stav (jen 1 trade/den; exit = TP / opačné pásmo / EOD) ----
+var int   pos = 0
+var bool  tradedToday = false
+var float entryPx = na
+var float slFix   = na
+var float tpFix   = na
 longSig  = false
 shortSig = false
-exitSig  = false
+exitSig  = false          // exit na opačném pásmu nebo EOD
+tpSig    = false          // exit na TP (intrabar dotek)
 
 if newSess
     pos := 0
@@ -82,12 +85,17 @@ if inSess and not na(vwap)
                     pos := -1
                     shortSig := true
                     tradedToday := true
-        else if pos == 1 and close < dn
-            exitSig := true     // zavřít (bez otočení — 1 trade/den)
-            pos := 0
-        else if pos == -1 and close > up
-            exitSig := true     // zavřít (bez otočení — 1 trade/den)
-            pos := 0
+        else
+            tpHit = not na(tpFix) and (pos == 1 ? high >= tpFix : low <= tpFix)
+            if tpHit
+                tpSig := true   // TP dotek = reálný exit
+                pos := 0
+            else if pos == 1 and close < dn
+                exitSig := true  // zavřít (bez otočení — 1 trade/den)
+                pos := 0
+            else if pos == -1 and close > up
+                exitSig := true  // zavřít (bez otočení — 1 trade/den)
+                pos := 0
 
 // ---- vykreslení ----
 plot(vwap, "VWAP (RTH)", color=color.new(color.orange, 0), linewidth=2)
@@ -103,9 +111,6 @@ var line   enLine  = na
 var line   slLine  = na
 var line   tpLine  = na
 var bool   trActive = false
-var float  entryPx = na
-var float  slFix   = na
-var float  tpFix   = na
 
 // prodluž čáry POUZE aktuálního (živého) trade
 if trActive and not na(slLine)
@@ -117,13 +122,13 @@ if longSig or shortSig
     dir     = longSig ? 1 : -1
     entryPx := close
     slFix   := dir == 1 ? dn : up          // opačné pásmo v okamžiku vstupu (zamrazené)
-    tpFix   := entryPx + dir * tpPoints     // TP přesně ±148.75 bodu (input)
+    tpFix   := entryPx + dir * tpPoints     // TP přesně ± tpPoints (poloviční, 74.375 b)
     enLine  := line.new(bar_index, entryPx, bar_index, entryPx, color=color.new(color.blue, 0),  width=1)
     slLine  := line.new(bar_index, slFix,   bar_index, slFix,   color=color.new(color.red, 0),   width=2)
     tpLine  := line.new(bar_index, tpFix,   bar_index, tpFix,   color=color.new(color.green, 0), width=2)
     trActive := true
 
-if exitSig and not na(slLine)               // dokresli po exit bar, ale NEMAŽ
+if (exitSig or tpSig) and not na(slLine)    // dokresli po exit bar, ale NEMAŽ
     line.set_x2(enLine, bar_index)
     line.set_x2(slLine, bar_index)
     line.set_x2(tpLine, bar_index)
@@ -140,7 +145,8 @@ plot(showSigma ? vwap - 2 * sd : na, "VWAP −2σ", color=color.new(color.purple
 
 plotshape(longSig,  "BUY",  shape.triangleup,   location.belowbar, color.new(color.green, 0), size=size.small, text="BUY")
 plotshape(shortSig, "SELL", shape.triangledown, location.abovebar, color.new(color.red, 0),   size=size.small, text="SELL")
-plotshape(exitSig,  "EOD EXIT", shape.xcross,   location.abovebar, color.new(color.gray, 0),  size=size.small, text="EOD")
+plotshape(tpSig,    "TP EXIT", shape.diamond,   location.abovebar, color.new(color.green, 0), size=size.small, text="TP")
+plotshape(exitSig,  "EXIT", shape.xcross,       location.abovebar, color.new(color.gray, 0),  size=size.small, text="EXIT")
 
 bgcolor(pos == 1 ? color.new(color.green, 94) : pos == -1 ? color.new(color.red, 94) : na)
 
@@ -156,4 +162,5 @@ if showInfo and barstate.islast
 // ---- alerty ----
 alertcondition(longSig,  "VWAP Trend BUY",      "NQ VWAP Trend: BUY (vstup na open další svíčky)")
 alertcondition(shortSig, "VWAP Trend SELL",     "NQ VWAP Trend: SELL (vstup na open další svíčky)")
-alertcondition(exitSig,  "VWAP Trend EOD EXIT", "NQ VWAP Trend: EOD flat (16:00 ET)")
+alertcondition(tpSig,    "VWAP Trend TP EXIT",  "NQ VWAP Trend: TP zasažen — exit")
+alertcondition(exitSig,  "VWAP Trend EXIT",     "NQ VWAP Trend: exit (opačné pásmo / 16:00 ET)")
