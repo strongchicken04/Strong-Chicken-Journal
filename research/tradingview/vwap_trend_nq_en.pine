@@ -1,0 +1,239 @@
+//@version=5
+// =====================================================================
+// NQ VWAP Trend (hysteresis band) — Strong Chicken, Project 3, v4 EN
+// Strategy: session VWAP (RTH 9:30–16:00 ET, HLC3 × volume, daily
+// reset), hysteresis band b = 20 bps, ONE TRADE PER DAY, EOD flat 16:00.
+//
+// GAP GATE (improvement from research phases A–D, IS 2018–2025):
+//   Do not trade days where |overnight gap| is below the 25th
+//   percentile of the last 250 days (small gap = no-energy day).
+//   The percentile is computed on a rolling basis from PAST days only
+//   (no lookahead).
+//   - today is a no-trade day -> red NO TRADE DAY banner in the corner
+//   - historical no-trade days -> red label at the 9:30 candle
+//     (drawn retroactively, never shown for the current day)
+//   - until at least 60 days of gap history exist, the gate is
+//     inactive (trades normally)
+//
+// TWO EXIT MODES (switch in settings):
+//   * "TP (fixed target)" = exit at TP entry ± 74.375 pts (intrabar
+//     touch), or close beyond the opposite band, or EOD. Draws SHORT
+//     entry/SL/TP lines (trade history stays on chart).
+//   * "Band (no TP)" = NO take profit; exit only on a close beyond the
+//     opposite band or at EOD. SL side of the band turns red, the
+//     trade-direction side green. Winners run.
+//
+// NOTES:
+//   * Use a 1-MINUTE chart of NQ (e.g. NQ1!). The script filters RTH.
+//   * Exit markers: green diamond TP / gray cross EXIT.
+//   * Position sizing (VT15) is handled at account level, not on chart.
+// =====================================================================
+indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v4", overlay=true, max_lines_count=500, max_labels_count=500)
+
+mode       = input.string("TP (fixed target)", "Exit mode", options=["TP (fixed target)", "Band (no TP)"],
+     tooltip="TP = fixed target ±74.375 pts, higher win-rate, smoother. Band = no TP, exit only beyond the opposite band — lets winners run (historically higher total return). EOD flat always.")
+bandBps    = input.float(20.0, "Hysteresis band (bps)", minval=0.0, step=2.5,
+     tooltip="Frozen strategy value = 20 bps. Do not change without re-validation.")
+tpPoints   = input.float(74.375, "TP distance (points) — TP mode only", minval=0.0, step=0.25,
+     tooltip="TP = entry ± this distance. TP touch = real trade exit. Unused in Band mode.")
+useGate    = input.bool(true,  "Gap gate (skip low-gap days)",
+     tooltip="Do not trade days with |overnight gap| below the chosen percentile of the last 250 days. From research phases A–D: Sharpe 0.85 -> 1.05, 2025 flipped positive.")
+gatePct    = input.float(25.0, "Gap gate percentile", minval=0.0, maxval=90.0, step=5.0,
+     tooltip="Recommended plateau center = 25 (works 15–30).")
+showBands  = input.bool(true,  "Show VWAP±b bands")
+showSigma  = input.bool(false, "Show VWAP σ-deviation bands (±1σ, ±2σ) — context only")
+showInfo   = input.bool(true,  "Info panel")
+
+useTP = mode == "TP (fixed target)"
+
+TZ   = "America/New_York"
+SESS = "0930-1600"
+
+inSess  = not na(time(timeframe.period, SESS, TZ))
+newSess = inSess and not inSess[1]
+eodBar  = inSess and hour(time, TZ) == 15 and minute(time, TZ) == 59
+
+// ---- GAP GATE: rolling percentile of |overnight gap| (past days only) ----
+var float prevSessClose = na       // close of yesterday's last RTH bar
+var float[] gapHist = array.new_float()
+var bool  allowedToday = true
+var bool  prevAllowed = true       // YESTERDAY's state (for the retro label)
+var int   sessStartBar = na
+var float sessStartHigh = na
+
+if newSess
+    // 1) retro label for YESTERDAY (so it never shows for the current day)
+    if useGate and not prevAllowed and not na(sessStartBar)
+        label.new(sessStartBar, sessStartHigh, "NO TRADE DAY",
+             color=color.new(color.red, 10), textcolor=color.white,
+             style=label.style_label_down, size=size.small)
+    // 2) today's gap + rank vs history (history does NOT include today)
+    float gapBps = na(prevSessClose) or prevSessClose <= 0 ? na : math.abs(open / prevSessClose - 1) * 10000
+    float rank = na
+    if not na(gapBps) and array.size(gapHist) >= 60
+        int below = 0
+        for i = 0 to array.size(gapHist) - 1
+            if array.get(gapHist, i) <= gapBps
+                below += 1
+        rank := below * 1.0 / array.size(gapHist)
+    allowedToday := not useGate or na(rank) or rank >= gatePct / 100.0
+    // 3) push today's gap into history (AFTER computing the rank)
+    if not na(gapBps)
+        array.push(gapHist, gapBps)
+        if array.size(gapHist) > 250
+            array.shift(gapHist)
+    prevAllowed := allowedToday
+    sessStartBar := bar_index
+    sessStartHigh := high
+
+if inSess
+    prevSessClose := close
+
+// ---- session VWAP (RTH-only, HLC3, daily reset) + variance for σ bands ----
+var float cumPV  = na
+var float cumV   = na
+var float cumPV2 = na
+if newSess
+    cumPV  := 0.0
+    cumV   := 0.0
+    cumPV2 := 0.0
+if inSess
+    cumPV  += hlc3 * volume
+    cumV   += volume
+    cumPV2 += hlc3 * hlc3 * volume
+vwap = inSess and cumV > 0 ? cumPV / cumV : na
+varv = inSess and cumV > 0 ? math.max(cumPV2 / cumV - vwap * vwap, 0.0) : na
+sd   = na(varv) ? na : math.sqrt(varv)
+
+b  = bandBps / 10000.0
+up = vwap * (1 + b)
+dn = vwap * (1 - b)
+
+// ---- position state (one trade/day; exit per mode; gap gate) ----
+var int   pos = 0
+var bool  tradedToday = false
+var float entryPx = na
+var float slFix   = na
+var float tpFix   = na
+longSig  = false
+shortSig = false
+exitSig  = false          // exit at opposite band or EOD
+tpSig    = false          // exit at TP (TP mode only)
+
+if newSess
+    pos := 0
+    tradedToday := false
+
+if inSess and not na(vwap)
+    if eodBar
+        if pos != 0
+            exitSig := true
+            pos := 0
+    else
+        if pos == 0
+            if not tradedToday and allowedToday       // 1 entry/day + gap gate
+                if close > up
+                    pos := 1
+                    longSig := true
+                    tradedToday := true
+                else if close < dn
+                    pos := -1
+                    shortSig := true
+                    tradedToday := true
+        else
+            tpHit = useTP and not na(tpFix) and (pos == 1 ? high >= tpFix : low <= tpFix)
+            if tpHit
+                tpSig := true   // TP touch = real exit (TP mode only)
+                pos := 0
+            else if pos == 1 and close < dn
+                exitSig := true  // close (no reverse — 1 trade/day)
+                pos := 0
+            else if pos == -1 and close > up
+                exitSig := true  // close (no reverse — 1 trade/day)
+                pos := 0
+
+// ---- drawing ----
+plot(vwap, "VWAP (RTH)", color=color.new(color.orange, 0), linewidth=2)
+
+// bands in Band mode with an open trade: SL side RED,
+// trade-direction side (where price should keep closing) GREEN
+slUpActive = not useTP and pos == -1     // short -> SL = upper band
+slDnActive = not useTP and pos == 1      // long  -> SL = lower band
+tpUpActive = not useTP and pos == 1      // long  -> green = upper band
+tpDnActive = not useTP and pos == -1     // short -> green = lower band
+pUp  = plot(showBands ? up : na, "VWAP + b", color=slUpActive ? color.new(color.red, 20) : tpUpActive ? color.new(color.green, 20) : color.new(color.teal, 55), linewidth=2)
+pDn  = plot(showBands ? dn : na, "VWAP − b", color=slDnActive ? color.new(color.red, 20) : tpDnActive ? color.new(color.green, 20) : color.new(color.teal, 55), linewidth=2)
+fill(pUp, pDn, color=color.new(color.teal, 95))
+
+// ---- SHORT entry/SL/TP lines — TP mode only (trade history, never deleted) ----
+var line   enLine  = na
+var line   slLine  = na
+var line   tpLine  = na
+var bool   trActive = false
+
+// extend ONLY the lines of the current (live) trade
+if trActive and not na(slLine)
+    line.set_x2(enLine, bar_index)
+    line.set_x2(slLine, bar_index)
+    line.set_x2(tpLine, bar_index)
+
+if (longSig or shortSig) and useTP
+    dir     = longSig ? 1 : -1
+    entryPx := close
+    slFix   := dir == 1 ? dn : up          // opposite band at entry time (frozen)
+    tpFix   := entryPx + dir * tpPoints     // TP exactly ± tpPoints
+    enLine  := line.new(bar_index, entryPx, bar_index, entryPx, color=color.new(color.blue, 0),  width=1)
+    slLine  := line.new(bar_index, slFix,   bar_index, slFix,   color=color.new(color.red, 0),   width=2)
+    tpLine  := line.new(bar_index, tpFix,   bar_index, tpFix,   color=color.new(color.green, 0), width=2)
+    trActive := true
+
+if (exitSig or tpSig) and not na(slLine)    // finish at the exit bar, do NOT delete
+    line.set_x2(enLine, bar_index)
+    line.set_x2(slLine, bar_index)
+    line.set_x2(tpLine, bar_index)
+    trActive := false
+    entryPx := na
+    slFix   := na
+    tpFix   := na
+
+// optional σ-deviation bands (context ONLY — the strategy does not use them)
+plot(showSigma ? vwap + sd     : na, "VWAP +1σ", color=color.new(color.purple, 65))
+plot(showSigma ? vwap - sd     : na, "VWAP −1σ", color=color.new(color.purple, 65))
+plot(showSigma ? vwap + 2 * sd : na, "VWAP +2σ", color=color.new(color.purple, 80))
+plot(showSigma ? vwap - 2 * sd : na, "VWAP −2σ", color=color.new(color.purple, 80))
+
+// entries + exits for EVERY trade (both modes)
+plotshape(longSig,  "BUY",  shape.triangleup,   location.belowbar, color.new(color.green, 0), size=size.small, text="BUY")
+plotshape(shortSig, "SELL", shape.triangledown, location.abovebar, color.new(color.red, 0),   size=size.small, text="SELL")
+plotshape(tpSig,    "TP EXIT", shape.diamond,   location.abovebar, color.new(color.green, 0), size=size.small, text="TP")
+plotshape(exitSig,  "EXIT", shape.xcross,       location.abovebar, color.new(color.gray, 0),  size=size.small, text="EXIT")
+
+bgcolor(pos == 1 ? color.new(color.green, 94) : pos == -1 ? color.new(color.red, 94) : na)
+
+// ---- RED corner banner for TODAY's no-trade day ----
+var table ntT = table.new(position.top_left, 1, 1)
+if barstate.islast
+    if useGate and not allowedToday
+        table.cell(ntT, 0, 0, "  NO TRADE DAY  ", text_color=color.white,
+             bgcolor=color.new(color.red, 10), text_size=size.normal)
+    else
+        table.cell(ntT, 0, 0, "", bgcolor=color.new(color.white, 100), text_size=size.tiny)
+
+// ---- info panel ----
+slShow = useTP ? slFix : (pos == 1 ? dn : pos == -1 ? up : na)
+var table t = table.new(position.top_right, 2, 7, border_width=1)
+if showInfo and barstate.islast
+    table.cell(t, 0, 0, "Mode",     text_size=size.small), table.cell(t, 1, 0, useTP ? "TP" : "Band", text_size=size.small)
+    table.cell(t, 0, 1, "Gap gate", text_size=size.small), table.cell(t, 1, 1, not useGate ? "off" : allowedToday ? "OK — trade" : "NO TRADE", text_size=size.small, text_color=not useGate ? color.gray : allowedToday ? color.green : color.red)
+    table.cell(t, 0, 2, "Position", text_size=size.small), table.cell(t, 1, 2, pos == 1 ? "LONG" : pos == -1 ? "SHORT" : "FLAT", text_size=size.small, text_color=pos == 1 ? color.green : pos == -1 ? color.red : color.gray)
+    table.cell(t, 0, 3, "VWAP",     text_size=size.small), table.cell(t, 1, 3, na(vwap) ? "—" : str.tostring(vwap, format.mintick), text_size=size.small)
+    table.cell(t, 0, 4, useTP ? "SL (fixed)" : "SL (band)", text_size=size.small), table.cell(t, 1, 4, na(slShow) ? "—" : str.tostring(slShow, format.mintick), text_size=size.small, text_color=color.red)
+    table.cell(t, 0, 5, "TP",       text_size=size.small), table.cell(t, 1, 5, not useTP ? "— (Band mode)" : na(tpFix) ? "—" : str.tostring(tpFix, format.mintick) + "  (±" + str.tostring(tpPoints) + "pt)", text_size=size.small, text_color=color.green)
+    table.cell(t, 0, 6, "Sizing",   text_size=size.small), table.cell(t, 1, 6, "VT15 (off-chart)", text_size=size.small)
+
+// ---- alerts ----
+alertcondition(longSig,  "VWAP Trend BUY",      "NQ VWAP Trend: BUY (enter at next candle open)")
+alertcondition(shortSig, "VWAP Trend SELL",     "NQ VWAP Trend: SELL (enter at next candle open)")
+alertcondition(tpSig,    "VWAP Trend TP EXIT",  "NQ VWAP Trend: TP hit — exit")
+alertcondition(exitSig,  "VWAP Trend EXIT",     "NQ VWAP Trend: exit (opposite band / 16:00 ET)")
+alertcondition(newSess and not allowedToday, "VWAP Trend NO TRADE DAY", "NQ VWAP Trend: today is a NO TRADE DAY (low overnight gap)")
