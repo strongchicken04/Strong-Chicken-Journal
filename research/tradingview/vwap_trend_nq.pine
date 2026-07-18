@@ -108,11 +108,14 @@ if inSess and not na(vwap)
 // ---- vykreslení ----
 plot(vwap, "VWAP (RTH)", color=color.new(color.orange, 0), linewidth=2)
 
-// pásma: v módu Pásmo se SL strana barví ČERVENĚ po dobu otevřeného trade
+// pásma v módu Pásmo při otevřeném trade: SL strana ČERVENĚ,
+// strana ve směru tradu (kde má cena zavírat) ZELENĚ
 slUpActive = not useTP and pos == -1     // short -> SL = horní pásmo
 slDnActive = not useTP and pos == 1      // long  -> SL = dolní pásmo
-pUp  = plot(showBands ? up : na, "VWAP + b", color=slUpActive ? color.new(color.red, 20) : color.new(color.teal, 55), linewidth=slUpActive ? 2 : 1)
-pDn  = plot(showBands ? dn : na, "VWAP − b", color=slDnActive ? color.new(color.red, 20) : color.new(color.teal, 55), linewidth=slDnActive ? 2 : 1)
+tpUpActive = not useTP and pos == 1      // long  -> zelená = horní pásmo
+tpDnActive = not useTP and pos == -1     // short -> zelená = dolní pásmo
+pUp  = plot(showBands ? up : na, "VWAP + b", color=slUpActive ? color.new(color.red, 20) : tpUpActive ? color.new(color.green, 20) : color.new(color.teal, 55), linewidth=slUpActive or tpUpActive ? 2 : 1)
+pDn  = plot(showBands ? dn : na, "VWAP − b", color=slDnActive ? color.new(color.red, 20) : tpDnActive ? color.new(color.green, 20) : color.new(color.teal, 55), linewidth=slDnActive or tpDnActive ? 2 : 1)
 fill(pUp, pDn, color=color.new(color.teal, 95))
 
 // ---- KRÁTKÉ čáry entry/SL/TP — JEN v módu TP (historie trades, nemažou se) ----
