@@ -1,6 +1,6 @@
 //@version=5
 // =====================================================================
-// NQ VWAP Trend (hysterezní pásmo) — Strong Chicken, Projekt 3, v5
+// NQ VWAP Trend (hysterezní pásmo) — Strong Chicken, Projekt 3, v5.1
 // FINÁLNÍ KONFIGURACE z výzkumu (fáze A–E, IS 2018–2025):
 //   vstup od 9:31, session VWAP RTH, pásmo b = 20 bps, 1 obchod/den,
 //   exit = close za opačným pásmem / EOD 16:00, BEZ TP (mód Pásmo),
@@ -9,12 +9,18 @@
 //                 posledních 250 dní (malý gap = den bez energie)
 //     TREND GATE: neobchoduj den PO silně trendovém dni — když včerejší
 //                 |close−open|/(high−low) > 60. percentil 250 dní
-//   Percentily klouzavě, JEN z minulých dní (žádný lookahead).
+//
+// NOVINKA v5.1: percentily bran se počítají z DENNÍCH RTH barů přes
+//   request.security — plné 250denní okno funguje OKAMŽITĚ, nezávisle
+//   na hloubce 1-min grafu a na limitu barů tvého TV plánu. Žádné
+//   čekání 60 dní. (Denní historie symbolu NQ1! má roky dat.)
+//   Bez lookaheadu: gap dneška je fixní od 9:30 (open vs včerejší RTH
+//   close), trendovost se bere ze VČERA UZAVŘENÉHO denního baru [1].
+//
 //   - dnešní no-trade den -> červený nápis NO TRADE DAY v rohu
 //     (s důvodem: gap / trend / gap+trend)
 //   - historické no-trade dny -> červený štítek u svíčky 9:30
 //     (kreslí se zpětně, u aktuálního dne se neukazuje)
-//   - dokud není 60 dní historie, gaty jsou neaktivní (obchoduje se)
 //
 // DVA MÓDY EXITU (přepínač): default = "Pásmo (bez TP)" (finální konfig).
 //   * "Pásmo (bez TP)" = exit až close za opačným pásmem / EOD; SL strana
@@ -24,7 +30,7 @@
 //
 // POZNÁMKY: 1-MIN chart NQ (NQ1!). Sizing VT15 na úrovni účtu.
 // =====================================================================
-indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v5", overlay=true, max_lines_count=500, max_labels_count=500)
+indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v5.1", overlay=true, max_lines_count=500, max_labels_count=500)
 
 mode       = input.string("Pásmo (bez TP)", "Mód exitu", options=["Pásmo (bez TP)", "TP (fixní cíl)"],
      tooltip="Pásmo = finální konfigurace z výzkumu (bez TP, vítězové běží). TP = fixní cíl ±74.375 b, vyšší win-rate, nižší výnos.")
@@ -51,14 +57,19 @@ inSess  = not na(time(timeframe.period, SESS, TZ))
 newSess = inSess and not inSess[1]
 eodBar  = inSess and hour(time, TZ) == 15 and minute(time, TZ) == 59
 
-// ---- GATY: klouzavé percentily (jen minulé dny) ----
-var float prevSessClose = na       // close posledního RTH baru včerejška
-var float[] gapHist = array.new_float()
-var float[] ptHist  = array.new_float()
-var float prevPtrend = na          // trendovost VČEREJŠKA
-var float dOpen = na               // dnešní RTH open/high/low (pro zítřejší ptrend)
-var float dHi = na
-var float dLo = na
+// ---- GATY v5.1: percentily z DENNÍCH RTH barů (request.security) ----
+// RTH verze symbolu -> denní bary open/close odpovídají 9:30/16:00
+rthTicker = ticker.modify(syminfo.tickerid, session.regular)
+// gap dneška: |open dneška / close včerejška − 1| — obě hodnoty fixní od 9:30,
+// hodnota se během dne NEMĚNÍ -> lookahead_on je zde bezpečný (žádný repaint)
+gapRank = request.security(rthTicker, "D",
+     ta.percentrank(math.abs(open / close[1] - 1) * 10000, 250),
+     lookahead=barmerge.lookahead_on)
+// trendovost VČEREJŠKA: bere se z UZAVŘENÉHO denního baru [1] -> žádný repaint
+ptRank = request.security(rthTicker, "D",
+     ta.percentrank((high - low) > 0 ? math.abs(close - open) / (high - low) : na, 250)[1],
+     lookahead=barmerge.lookahead_on)
+
 var bool  allowedToday = true
 var bool  prevAllowed = true
 var string gateReason = ""
@@ -71,52 +82,14 @@ if newSess
         label.new(sessStartBar, sessStartHigh, "NO TRADE DAY",
              color=color.new(color.red, 10), textcolor=color.white,
              style=label.style_label_down, size=size.small)
-    // 2) ptrend: předvčerejšek do historie, spočti včerejšek
-    if not na(prevPtrend)
-        array.push(ptHist, prevPtrend)
-        if array.size(ptHist) > 250
-            array.shift(ptHist)
-    if not na(dOpen) and not na(dHi) and not na(dLo) and dHi > dLo and not na(prevSessClose)
-        prevPtrend := math.abs(prevSessClose - dOpen) / (dHi - dLo)
-    else
-        prevPtrend := na
-    // 3) dnešní gap + ranky vůči historii (historie dnešek/včerejšek neobsahuje)
-    float gapBps = na(prevSessClose) or prevSessClose <= 0 ? na : math.abs(open / prevSessClose - 1) * 10000
-    float gapRank = na
-    if not na(gapBps) and array.size(gapHist) >= 60
-        int below = 0
-        for i = 0 to array.size(gapHist) - 1
-            if array.get(gapHist, i) <= gapBps
-                below += 1
-        gapRank := below * 1.0 / array.size(gapHist)
-    float ptRank = na
-    if not na(prevPtrend) and array.size(ptHist) >= 60
-        int below2 = 0
-        for i = 0 to array.size(ptHist) - 1
-            if array.get(ptHist, i) <= prevPtrend
-                below2 += 1
-        ptRank := below2 * 1.0 / array.size(ptHist)
-    bool gapOK = not useGate or na(gapRank) or gapRank >= gatePct / 100.0
-    bool ptOK  = not usePtGate or na(ptRank) or ptRank <= ptPct / 100.0
+    // 2) vyhodnoť brány z denních percentilů
+    bool gapOK = not useGate or na(gapRank) or gapRank >= gatePct
+    bool ptOK  = not usePtGate or na(ptRank) or ptRank <= ptPct
     allowedToday := gapOK and ptOK
     gateReason := not gapOK and not ptOK ? "gap+trend" : not gapOK ? "gap" : not ptOK ? "trend" : ""
-    // 4) dnešní gap do historie (až PO výpočtu ranku)
-    if not na(gapBps)
-        array.push(gapHist, gapBps)
-        if array.size(gapHist) > 250
-            array.shift(gapHist)
     prevAllowed := allowedToday
     sessStartBar := bar_index
     sessStartHigh := high
-    // reset dnešních RTH statistik
-    dOpen := open
-    dHi := high
-    dLo := low
-
-if inSess
-    prevSessClose := close
-    dHi := math.max(nz(dHi, high), high)
-    dLo := math.min(nz(dLo, low), low)
 
 // ---- session VWAP (RTH-only, HLC3, reset denně) + rozptyl pro σ bandy ----
 var float cumPV  = na

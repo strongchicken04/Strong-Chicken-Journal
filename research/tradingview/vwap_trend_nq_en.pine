@@ -1,6 +1,6 @@
 //@version=5
 // =====================================================================
-// NQ VWAP Trend (hysteresis band) — Strong Chicken, Project 3, v5 EN
+// NQ VWAP Trend (hysteresis band) — Strong Chicken, Project 3, v5.1 EN
 // FINAL CONFIGURATION from research (phases A–E, IS 2018–2025):
 //   entry from 9:31, session VWAP RTH, band b = 20 bps, 1 trade/day,
 //   exit = close beyond the opposite band / EOD 16:00, NO TP (Band
@@ -10,23 +10,28 @@
 //     TREND GATE: do not trade the day AFTER a strongly trending day —
 //                 when yesterday's |close−open|/(high−low) > 60th
 //                 percentile of the last 250 days
-//   Percentiles are rolling, computed from PAST days only (no lookahead).
+//
+// NEW in v5.1: the gate percentiles are computed from DAILY RTH bars
+//   via request.security — the full 250-day window works IMMEDIATELY,
+//   independent of the 1-minute chart depth and your TV plan's bar
+//   limit. No 60-day wait. (NQ1! daily history spans years.)
+//   No lookahead: today's gap is fixed from 9:30 (open vs yesterday's
+//   RTH close); trendiness comes from YESTERDAY's CLOSED daily bar [1].
+//
 //   - today is a no-trade day -> red NO TRADE DAY banner in the corner
 //     (with the reason: gap / trend / gap+trend)
 //   - historical no-trade days -> red label at the 9:30 candle
 //     (drawn retroactively, never shown for the current day)
-//   - until 60 days of history exist, the gates are inactive (trades)
 //
 // TWO EXIT MODES (switch): default = "Band (no TP)" (final config).
 //   * "Band (no TP)" = exit only on a close beyond the opposite band /
 //     EOD; SL side of the band red, trade-direction side green.
-//     Winners run.
 //   * "TP (fixed target)" = additionally exit at entry ± 74.375 pts
 //     (intrabar touch); short entry/SL/TP lines as trade history.
 //
 // NOTES: 1-MIN chart of NQ (NQ1!). Sizing (VT15) at account level.
 // =====================================================================
-indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v5", overlay=true, max_lines_count=500, max_labels_count=500)
+indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v5.1", overlay=true, max_lines_count=500, max_labels_count=500)
 
 mode       = input.string("Band (no TP)", "Exit mode", options=["Band (no TP)", "TP (fixed target)"],
      tooltip="Band = final configuration from research (no TP, winners run). TP = fixed target ±74.375 pts, higher win-rate, lower total return.")
@@ -53,14 +58,19 @@ inSess  = not na(time(timeframe.period, SESS, TZ))
 newSess = inSess and not inSess[1]
 eodBar  = inSess and hour(time, TZ) == 15 and minute(time, TZ) == 59
 
-// ---- GATES: rolling percentiles (past days only) ----
-var float prevSessClose = na       // close of yesterday's last RTH bar
-var float[] gapHist = array.new_float()
-var float[] ptHist  = array.new_float()
-var float prevPtrend = na          // YESTERDAY's trendiness
-var float dOpen = na               // today's RTH open/high/low (for tomorrow's ptrend)
-var float dHi = na
-var float dLo = na
+// ---- GATES v5.1: percentiles from DAILY RTH bars (request.security) ----
+// RTH version of the symbol -> daily open/close correspond to 9:30/16:00
+rthTicker = ticker.modify(syminfo.tickerid, session.regular)
+// today's gap: |today's open / yesterday's close − 1| — both fixed from 9:30,
+// the value does NOT change during the day -> lookahead_on is safe here (no repaint)
+gapRank = request.security(rthTicker, "D",
+     ta.percentrank(math.abs(open / close[1] - 1) * 10000, 250),
+     lookahead=barmerge.lookahead_on)
+// YESTERDAY's trendiness: taken from the CLOSED daily bar [1] -> no repaint
+ptRank = request.security(rthTicker, "D",
+     ta.percentrank((high - low) > 0 ? math.abs(close - open) / (high - low) : na, 250)[1],
+     lookahead=barmerge.lookahead_on)
+
 var bool  allowedToday = true
 var bool  prevAllowed = true
 var string gateReason = ""
@@ -73,52 +83,14 @@ if newSess
         label.new(sessStartBar, sessStartHigh, "NO TRADE DAY",
              color=color.new(color.red, 10), textcolor=color.white,
              style=label.style_label_down, size=size.small)
-    // 2) ptrend: push the day-before-yesterday into history, compute yesterday
-    if not na(prevPtrend)
-        array.push(ptHist, prevPtrend)
-        if array.size(ptHist) > 250
-            array.shift(ptHist)
-    if not na(dOpen) and not na(dHi) and not na(dLo) and dHi > dLo and not na(prevSessClose)
-        prevPtrend := math.abs(prevSessClose - dOpen) / (dHi - dLo)
-    else
-        prevPtrend := na
-    // 3) today's gap + ranks vs history (history excludes today/yesterday)
-    float gapBps = na(prevSessClose) or prevSessClose <= 0 ? na : math.abs(open / prevSessClose - 1) * 10000
-    float gapRank = na
-    if not na(gapBps) and array.size(gapHist) >= 60
-        int below = 0
-        for i = 0 to array.size(gapHist) - 1
-            if array.get(gapHist, i) <= gapBps
-                below += 1
-        gapRank := below * 1.0 / array.size(gapHist)
-    float ptRank = na
-    if not na(prevPtrend) and array.size(ptHist) >= 60
-        int below2 = 0
-        for i = 0 to array.size(ptHist) - 1
-            if array.get(ptHist, i) <= prevPtrend
-                below2 += 1
-        ptRank := below2 * 1.0 / array.size(ptHist)
-    bool gapOK = not useGate or na(gapRank) or gapRank >= gatePct / 100.0
-    bool ptOK  = not usePtGate or na(ptRank) or ptRank <= ptPct / 100.0
+    // 2) evaluate the gates from the daily percentiles
+    bool gapOK = not useGate or na(gapRank) or gapRank >= gatePct
+    bool ptOK  = not usePtGate or na(ptRank) or ptRank <= ptPct
     allowedToday := gapOK and ptOK
     gateReason := not gapOK and not ptOK ? "gap+trend" : not gapOK ? "gap" : not ptOK ? "trend" : ""
-    // 4) push today's gap into history (AFTER computing the rank)
-    if not na(gapBps)
-        array.push(gapHist, gapBps)
-        if array.size(gapHist) > 250
-            array.shift(gapHist)
     prevAllowed := allowedToday
     sessStartBar := bar_index
     sessStartHigh := high
-    // reset today's RTH stats
-    dOpen := open
-    dHi := high
-    dLo := low
-
-if inSess
-    prevSessClose := close
-    dHi := math.max(nz(dHi, high), high)
-    dLo := math.min(nz(dLo, low), low)
 
 // ---- session VWAP (RTH-only, HLC3, daily reset) + variance for σ bands ----
 var float cumPV  = na
