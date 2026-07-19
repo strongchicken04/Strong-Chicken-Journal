@@ -1,6 +1,6 @@
 //@version=5
 // =====================================================================
-// NQ VWAP Trend (hysteresis band) — Strong Chicken, Project 3, v5.2 EN
+// NQ VWAP Trend (hysteresis band) — Strong Chicken, Project 3, v6 EN
 // FINAL CONFIGURATION from research (phases A–E, IS 2018–2025):
 //   entry from 9:31, session VWAP RTH, band b = 20 bps, 1 trade/day,
 //   exit = close beyond the opposite band / EOD 16:00, NO TP (Band
@@ -11,12 +11,14 @@
 //                 when yesterday's |close−open|/(high−low) > 60th
 //                 percentile of the last 250 days
 //
-// NEW in v5.2: the gate percentiles are computed from DAILY RTH bars
-//   via request.security — the full 250-day window works IMMEDIATELY,
-//   independent of the 1-minute chart depth and your TV plan's bar
-//   limit. No 60-day wait. (NQ1! daily history spans years.)
-//   No lookahead: today's gap is fixed from 9:30 (open vs yesterday's
-//   RTH close); trendiness comes from YESTERDAY's CLOSED daily bar [1].
+// v6: the gate percentiles are computed DIRECTLY from the chart's 1-min
+//   RTH bars (exactly like the QC backtest), NOT via request.security —
+//   this removes the session ambiguity that in v5.x blocked far too many
+//   days. Gap = 9:30 open vs yesterday's 16:00 RTH close; trendiness =
+//   |close−open|/(high−low) of the completed prior RTH day. Percentile
+//   from PAST days only (250-day window). Gates active after 60 days of
+//   RTH history, full fidelity from ~250 days. Panel diagnostic:
+//   "Gap today" (bps + percentile) — should be tens of bps; ~0 = bad data.
 //
 //   - today is a no-trade day -> red NO TRADE DAY banner in the corner
 //     (with the reason: gap / trend / gap+trend)
@@ -58,28 +60,34 @@ inSess  = not na(time(timeframe.period, SESS, TZ))
 newSess = inSess and not inSess[1]
 eodBar  = inSess and hour(time, TZ) == 15 and minute(time, TZ) == 59
 
-// ---- GATES v5.2: percentiles from DAILY RTH bars (request.security) ----
-// RTH version of the symbol -> daily open/close correspond to 9:30/16:00
-rthTicker = ticker.modify(syminfo.tickerid, session.regular)
-// today's gap: |today's open / yesterday's close − 1| — both fixed from 9:30,
-// the value does NOT change during the day -> lookahead_on is safe here (no repaint)
-gapRank = request.security(rthTicker, "D",
-     ta.percentrank(math.abs(open / close[1] - 1) * 10000, 250),
-     lookahead=barmerge.lookahead_on)
-// YESTERDAY's trendiness: taken from the CLOSED daily bar [1] -> no repaint
-ptRank = request.security(rthTicker, "D",
-     ta.percentrank((high - low) > 0 ? math.abs(close - open) / (high - low) : na, 250)[1],
-     lookahead=barmerge.lookahead_on)
-// diagnostika: syrový dnešní gap v bps (pro kontrolu správné session)
-gapBps = request.security(rthTicker, "D",
-     math.abs(open / close[1] - 1) * 10000,
-     lookahead=barmerge.lookahead_on)
+// ---- GATES v6: computed from the chart's 1-MIN RTH bars (EXACTLY like the backtest) ----
+// no request.security, no session ambiguity. Percentile from PAST days
+// only (rolling 250-day window). Active after 60 days of history.
+f_rank(arr, val) =>
+    n = array.size(arr)
+    r = float(na)
+    if not na(val) and n >= 60
+        below = 0
+        for i = 0 to n - 1
+            if array.get(arr, i) <= val
+                below += 1
+        r := below / n
+    r
 
-var bool  allowedToday = true
-var bool  prevAllowed = true
-var string gateReason = ""
-var int   sessStartBar = na
-var float sessStartHigh = na
+var float   prevSessClose = na       // yesterday's last RTH close
+var float[] gapHist = array.new_float()
+var float[] ptHist  = array.new_float()
+var float   dOpen = na               // today's RTH open/high/low
+var float   dHi   = na
+var float   dLo   = na
+var float   todayGapBps = na
+var float   gapRank = na             // 0..1 percentile (past days only)
+var float   ptRank  = na
+var bool    allowedToday = true
+var bool    prevAllowed = true
+var string  gateReason = ""
+var int     sessStartBar = na
+var float   sessStartHigh = na
 
 if newSess
     // 1) retro label for YESTERDAY (so it never shows for the current day)
@@ -87,14 +95,39 @@ if newSess
         label.new(sessStartBar, sessStartHigh, "NO TRADE DAY",
              color=color.new(color.red, 10), textcolor=color.white,
              style=label.style_label_down, size=size.small)
-    // 2) evaluate the gates from the daily percentiles
-    bool gapOK = not useGate or na(gapRank) or gapRank >= gatePct
-    bool ptOK  = not usePtGate or na(ptRank) or ptRank <= ptPct
+    // 2) yesterday's trendiness from the completed RTH day (dOpen/dHi/dLo/prevSessClose)
+    yptrend = not na(dOpen) and not na(dHi) and not na(dLo) and not na(prevSessClose) and dHi > dLo ? math.abs(prevSessClose - dOpen) / (dHi - dLo) : na
+    // 3) today's gap: |9:30 open / yesterday's 16:00 close − 1| in bps
+    todayGapBps := not na(prevSessClose) and prevSessClose > 0 ? math.abs(open / prevSessClose - 1) * 10000 : na
+    // 4) ranks vs history (history EXCLUDES today/yesterday -> no lookahead)
+    gapRank := f_rank(gapHist, todayGapBps)
+    ptRank  := f_rank(ptHist, yptrend)
+    // 5) gates
+    gapOK = not useGate or na(gapRank) or gapRank >= gatePct / 100.0
+    ptOK  = not usePtGate or na(ptRank) or ptRank <= ptPct / 100.0
     allowedToday := gapOK and ptOK
     gateReason := not gapOK and not ptOK ? "gap+trend" : not gapOK ? "gap" : not ptOK ? "trend" : ""
+    // 6) ONLY NOW push into history (after computing the ranks)
+    if not na(todayGapBps)
+        array.push(gapHist, todayGapBps)
+        if array.size(gapHist) > 250
+            array.shift(gapHist)
+    if not na(yptrend)
+        array.push(ptHist, yptrend)
+        if array.size(ptHist) > 250
+            array.shift(ptHist)
+    // 7) reset today's RTH accumulators
     prevAllowed := allowedToday
     sessStartBar := bar_index
     sessStartHigh := high
+    dOpen := open
+    dHi := high
+    dLo := low
+
+if inSess
+    prevSessClose := close
+    dHi := math.max(nz(dHi, high), high)
+    dLo := math.min(nz(dLo, low), low)
 
 // ---- session VWAP (RTH-only, HLC3, daily reset) + variance for σ bands ----
 var float cumPV  = na
@@ -232,8 +265,8 @@ var table t = table.new(position.top_right, 2, 9, border_width=1)
 if showInfo and barstate.islast
     table.cell(t, 0, 0, "Mode",     text_size=size.small), table.cell(t, 1, 0, useTP ? "TP" : "Band", text_size=size.small)
     table.cell(t, 0, 1, "Gates",    text_size=size.small), table.cell(t, 1, 1, not (useGate or usePtGate) ? "off" : allowedToday ? "OK — trade" : "NO TRADE (" + gateReason + ")", text_size=size.small, text_color=not (useGate or usePtGate) ? color.gray : allowedToday ? color.green : color.red)
-    table.cell(t, 0, 2, "Gap today", text_size=size.small), table.cell(t, 1, 2, na(gapRank) ? "—" : str.tostring(gapBps, "#.0") + " bps → " + str.tostring(gapRank, "#.0") + "th pct", text_size=size.small)
-    table.cell(t, 0, 3, "Trend yday", text_size=size.small), table.cell(t, 1, 3, na(ptRank) ? "—" : str.tostring(ptRank, "#.0") + "th pct", text_size=size.small)
+    table.cell(t, 0, 2, "Gap today", text_size=size.small), table.cell(t, 1, 2, na(todayGapBps) ? "—" : str.tostring(todayGapBps, "#.0") + " bps" + (na(gapRank) ? " (loading…)" : " → " + str.tostring(gapRank * 100, "#.0") + "th pct"), text_size=size.small)
+    table.cell(t, 0, 3, "Trend yday", text_size=size.small), table.cell(t, 1, 3, na(ptRank) ? "—" : str.tostring(ptRank * 100, "#.0") + "th pct", text_size=size.small)
     table.cell(t, 0, 4, "Position", text_size=size.small), table.cell(t, 1, 4, pos == 1 ? "LONG" : pos == -1 ? "SHORT" : "FLAT", text_size=size.small, text_color=pos == 1 ? color.green : pos == -1 ? color.red : color.gray)
     table.cell(t, 0, 5, "VWAP",     text_size=size.small), table.cell(t, 1, 5, na(vwap) ? "—" : str.tostring(vwap, format.mintick), text_size=size.small)
     table.cell(t, 0, 6, useTP ? "SL (fixed)" : "SL (band)", text_size=size.small), table.cell(t, 1, 6, na(slShow) ? "—" : str.tostring(slShow, format.mintick), text_size=size.small, text_color=color.red)
