@@ -32,7 +32,7 @@
 //
 // POZNÁMKY: 1-MIN chart NQ (NQ1!). Sizing VT15 na úrovni účtu.
 // =====================================================================
-indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v5.2", overlay=true, max_lines_count=500, max_labels_count=500)
+indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v6", overlay=true, max_lines_count=500, max_labels_count=500)
 
 mode       = input.string("Pásmo (bez TP)", "Mód exitu", options=["Pásmo (bez TP)", "TP (fixní cíl)"],
      tooltip="Pásmo = finální konfigurace z výzkumu (bez TP, vítězové běží). TP = fixní cíl ±74.375 b, vyšší win-rate, nižší výnos.")

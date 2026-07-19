@@ -33,7 +33,7 @@
 //
 // NOTES: 1-MIN chart of NQ (NQ1!). Sizing (VT15) at account level.
 // =====================================================================
-indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v5.2", overlay=true, max_lines_count=500, max_labels_count=500)
+indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v6", overlay=true, max_lines_count=500, max_labels_count=500)
 
 mode       = input.string("Band (no TP)", "Exit mode", options=["Band (no TP)", "TP (fixed target)"],
      tooltip="Band = final configuration from research (no TP, winners run). TP = fixed target ±74.375 pts, higher win-rate, lower total return.")
