@@ -1,6 +1,6 @@
 //@version=5
 // =====================================================================
-// NQ VWAP Trend (hysteresis band) — Strong Chicken, Project 3, v5.1 EN
+// NQ VWAP Trend (hysteresis band) — Strong Chicken, Project 3, v5.2 EN
 // FINAL CONFIGURATION from research (phases A–E, IS 2018–2025):
 //   entry from 9:31, session VWAP RTH, band b = 20 bps, 1 trade/day,
 //   exit = close beyond the opposite band / EOD 16:00, NO TP (Band
@@ -11,7 +11,7 @@
 //                 when yesterday's |close−open|/(high−low) > 60th
 //                 percentile of the last 250 days
 //
-// NEW in v5.1: the gate percentiles are computed from DAILY RTH bars
+// NEW in v5.2: the gate percentiles are computed from DAILY RTH bars
 //   via request.security — the full 250-day window works IMMEDIATELY,
 //   independent of the 1-minute chart depth and your TV plan's bar
 //   limit. No 60-day wait. (NQ1! daily history spans years.)
@@ -31,7 +31,7 @@
 //
 // NOTES: 1-MIN chart of NQ (NQ1!). Sizing (VT15) at account level.
 // =====================================================================
-indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v5.1", overlay=true, max_lines_count=500, max_labels_count=500)
+indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v5.2", overlay=true, max_lines_count=500, max_labels_count=500)
 
 mode       = input.string("Band (no TP)", "Exit mode", options=["Band (no TP)", "TP (fixed target)"],
      tooltip="Band = final configuration from research (no TP, winners run). TP = fixed target ±74.375 pts, higher win-rate, lower total return.")
@@ -58,7 +58,7 @@ inSess  = not na(time(timeframe.period, SESS, TZ))
 newSess = inSess and not inSess[1]
 eodBar  = inSess and hour(time, TZ) == 15 and minute(time, TZ) == 59
 
-// ---- GATES v5.1: percentiles from DAILY RTH bars (request.security) ----
+// ---- GATES v5.2: percentiles from DAILY RTH bars (request.security) ----
 // RTH version of the symbol -> daily open/close correspond to 9:30/16:00
 rthTicker = ticker.modify(syminfo.tickerid, session.regular)
 // today's gap: |today's open / yesterday's close − 1| — both fixed from 9:30,
@@ -69,6 +69,10 @@ gapRank = request.security(rthTicker, "D",
 // YESTERDAY's trendiness: taken from the CLOSED daily bar [1] -> no repaint
 ptRank = request.security(rthTicker, "D",
      ta.percentrank((high - low) > 0 ? math.abs(close - open) / (high - low) : na, 250)[1],
+     lookahead=barmerge.lookahead_on)
+// diagnostika: syrový dnešní gap v bps (pro kontrolu správné session)
+gapBps = request.security(rthTicker, "D",
+     math.abs(open / close[1] - 1) * 10000,
      lookahead=barmerge.lookahead_on)
 
 var bool  allowedToday = true
@@ -224,15 +228,17 @@ if barstate.islast
 
 // ---- info panel ----
 slShow = useTP ? slFix : (pos == 1 ? dn : pos == -1 ? up : na)
-var table t = table.new(position.top_right, 2, 7, border_width=1)
+var table t = table.new(position.top_right, 2, 9, border_width=1)
 if showInfo and barstate.islast
     table.cell(t, 0, 0, "Mode",     text_size=size.small), table.cell(t, 1, 0, useTP ? "TP" : "Band", text_size=size.small)
     table.cell(t, 0, 1, "Gates",    text_size=size.small), table.cell(t, 1, 1, not (useGate or usePtGate) ? "off" : allowedToday ? "OK — trade" : "NO TRADE (" + gateReason + ")", text_size=size.small, text_color=not (useGate or usePtGate) ? color.gray : allowedToday ? color.green : color.red)
-    table.cell(t, 0, 2, "Position", text_size=size.small), table.cell(t, 1, 2, pos == 1 ? "LONG" : pos == -1 ? "SHORT" : "FLAT", text_size=size.small, text_color=pos == 1 ? color.green : pos == -1 ? color.red : color.gray)
-    table.cell(t, 0, 3, "VWAP",     text_size=size.small), table.cell(t, 1, 3, na(vwap) ? "—" : str.tostring(vwap, format.mintick), text_size=size.small)
-    table.cell(t, 0, 4, useTP ? "SL (fixed)" : "SL (band)", text_size=size.small), table.cell(t, 1, 4, na(slShow) ? "—" : str.tostring(slShow, format.mintick), text_size=size.small, text_color=color.red)
-    table.cell(t, 0, 5, "TP",       text_size=size.small), table.cell(t, 1, 5, not useTP ? "— (Band mode)" : na(tpFix) ? "—" : str.tostring(tpFix, format.mintick) + "  (±" + str.tostring(tpPoints) + "pt)", text_size=size.small, text_color=color.green)
-    table.cell(t, 0, 6, "Sizing",   text_size=size.small), table.cell(t, 1, 6, "VT15 (off-chart)", text_size=size.small)
+    table.cell(t, 0, 2, "Gap today", text_size=size.small), table.cell(t, 1, 2, na(gapRank) ? "—" : str.tostring(gapBps, "#.0") + " bps → " + str.tostring(gapRank, "#.0") + "th pct", text_size=size.small)
+    table.cell(t, 0, 3, "Trend yday", text_size=size.small), table.cell(t, 1, 3, na(ptRank) ? "—" : str.tostring(ptRank, "#.0") + "th pct", text_size=size.small)
+    table.cell(t, 0, 4, "Position", text_size=size.small), table.cell(t, 1, 4, pos == 1 ? "LONG" : pos == -1 ? "SHORT" : "FLAT", text_size=size.small, text_color=pos == 1 ? color.green : pos == -1 ? color.red : color.gray)
+    table.cell(t, 0, 5, "VWAP",     text_size=size.small), table.cell(t, 1, 5, na(vwap) ? "—" : str.tostring(vwap, format.mintick), text_size=size.small)
+    table.cell(t, 0, 6, useTP ? "SL (fixed)" : "SL (band)", text_size=size.small), table.cell(t, 1, 6, na(slShow) ? "—" : str.tostring(slShow, format.mintick), text_size=size.small, text_color=color.red)
+    table.cell(t, 0, 7, "TP",       text_size=size.small), table.cell(t, 1, 7, not useTP ? "— (Band mode)" : na(tpFix) ? "—" : str.tostring(tpFix, format.mintick) + "  (±" + str.tostring(tpPoints) + "pt)", text_size=size.small, text_color=color.green)
+    table.cell(t, 0, 8, "Sizing",   text_size=size.small), table.cell(t, 1, 8, "VT15 (off-chart)", text_size=size.small)
 
 // ---- alerts ----
 alertcondition(longSig,  "VWAP Trend BUY",      "NQ VWAP Trend: BUY (enter at next candle open)")

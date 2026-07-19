@@ -1,6 +1,6 @@
 //@version=5
 // =====================================================================
-// NQ VWAP Trend (hysterezní pásmo) — Strong Chicken, Projekt 3, v5.1
+// NQ VWAP Trend (hysterezní pásmo) — Strong Chicken, Projekt 3, v5.2
 // FINÁLNÍ KONFIGURACE z výzkumu (fáze A–E, IS 2018–2025):
 //   vstup od 9:31, session VWAP RTH, pásmo b = 20 bps, 1 obchod/den,
 //   exit = close za opačným pásmem / EOD 16:00, BEZ TP (mód Pásmo),
@@ -10,7 +10,7 @@
 //     TREND GATE: neobchoduj den PO silně trendovém dni — když včerejší
 //                 |close−open|/(high−low) > 60. percentil 250 dní
 //
-// NOVINKA v5.1: percentily bran se počítají z DENNÍCH RTH barů přes
+// NOVINKA v5.2: percentily bran se počítají z DENNÍCH RTH barů přes
 //   request.security — plné 250denní okno funguje OKAMŽITĚ, nezávisle
 //   na hloubce 1-min grafu a na limitu barů tvého TV plánu. Žádné
 //   čekání 60 dní. (Denní historie symbolu NQ1! má roky dat.)
@@ -30,7 +30,7 @@
 //
 // POZNÁMKY: 1-MIN chart NQ (NQ1!). Sizing VT15 na úrovni účtu.
 // =====================================================================
-indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v5.1", overlay=true, max_lines_count=500, max_labels_count=500)
+indicator("NQ VWAP Trend (b=20bps) — Strong Chicken v5.2", overlay=true, max_lines_count=500, max_labels_count=500)
 
 mode       = input.string("Pásmo (bez TP)", "Mód exitu", options=["Pásmo (bez TP)", "TP (fixní cíl)"],
      tooltip="Pásmo = finální konfigurace z výzkumu (bez TP, vítězové běží). TP = fixní cíl ±74.375 b, vyšší win-rate, nižší výnos.")
@@ -57,7 +57,7 @@ inSess  = not na(time(timeframe.period, SESS, TZ))
 newSess = inSess and not inSess[1]
 eodBar  = inSess and hour(time, TZ) == 15 and minute(time, TZ) == 59
 
-// ---- GATY v5.1: percentily z DENNÍCH RTH barů (request.security) ----
+// ---- GATY v5.2: percentily z DENNÍCH RTH barů (request.security) ----
 // RTH verze symbolu -> denní bary open/close odpovídají 9:30/16:00
 rthTicker = ticker.modify(syminfo.tickerid, session.regular)
 // gap dneška: |open dneška / close včerejška − 1| — obě hodnoty fixní od 9:30,
@@ -68,6 +68,10 @@ gapRank = request.security(rthTicker, "D",
 // trendovost VČEREJŠKA: bere se z UZAVŘENÉHO denního baru [1] -> žádný repaint
 ptRank = request.security(rthTicker, "D",
      ta.percentrank((high - low) > 0 ? math.abs(close - open) / (high - low) : na, 250)[1],
+     lookahead=barmerge.lookahead_on)
+// diagnostika: syrový dnešní gap v bps (pro kontrolu správné session)
+gapBps = request.security(rthTicker, "D",
+     math.abs(open / close[1] - 1) * 10000,
      lookahead=barmerge.lookahead_on)
 
 var bool  allowedToday = true
@@ -223,15 +227,17 @@ if barstate.islast
 
 // ---- info panel ----
 slShow = useTP ? slFix : (pos == 1 ? dn : pos == -1 ? up : na)
-var table t = table.new(position.top_right, 2, 7, border_width=1)
+var table t = table.new(position.top_right, 2, 9, border_width=1)
 if showInfo and barstate.islast
     table.cell(t, 0, 0, "Mód",      text_size=size.small), table.cell(t, 1, 0, useTP ? "TP" : "Pásmo", text_size=size.small)
     table.cell(t, 0, 1, "Gaty",     text_size=size.small), table.cell(t, 1, 1, not (useGate or usePtGate) ? "vypnuté" : allowedToday ? "OK — obchoduj" : "NO TRADE (" + gateReason + ")", text_size=size.small, text_color=not (useGate or usePtGate) ? color.gray : allowedToday ? color.green : color.red)
-    table.cell(t, 0, 2, "Pozice",   text_size=size.small), table.cell(t, 1, 2, pos == 1 ? "LONG" : pos == -1 ? "SHORT" : "FLAT", text_size=size.small, text_color=pos == 1 ? color.green : pos == -1 ? color.red : color.gray)
-    table.cell(t, 0, 3, "VWAP",     text_size=size.small), table.cell(t, 1, 3, na(vwap) ? "—" : str.tostring(vwap, format.mintick), text_size=size.small)
-    table.cell(t, 0, 4, useTP ? "SL (pevný)" : "SL (pásmo)", text_size=size.small), table.cell(t, 1, 4, na(slShow) ? "—" : str.tostring(slShow, format.mintick), text_size=size.small, text_color=color.red)
-    table.cell(t, 0, 5, "TP",       text_size=size.small), table.cell(t, 1, 5, not useTP ? "— (mód Pásmo)" : na(tpFix) ? "—" : str.tostring(tpFix, format.mintick) + "  (±" + str.tostring(tpPoints) + "b)", text_size=size.small, text_color=color.green)
-    table.cell(t, 0, 6, "Sizing",   text_size=size.small), table.cell(t, 1, 6, "VT15 (mimo chart)", text_size=size.small)
+    table.cell(t, 0, 2, "Gap dnes", text_size=size.small), table.cell(t, 1, 2, na(gapRank) ? "—" : str.tostring(gapBps, "#.0") + " bps → " + str.tostring(gapRank, "#.0") + ". pct", text_size=size.small)
+    table.cell(t, 0, 3, "Trend včera", text_size=size.small), table.cell(t, 1, 3, na(ptRank) ? "—" : str.tostring(ptRank, "#.0") + ". pct", text_size=size.small)
+    table.cell(t, 0, 4, "Pozice",   text_size=size.small), table.cell(t, 1, 4, pos == 1 ? "LONG" : pos == -1 ? "SHORT" : "FLAT", text_size=size.small, text_color=pos == 1 ? color.green : pos == -1 ? color.red : color.gray)
+    table.cell(t, 0, 5, "VWAP",     text_size=size.small), table.cell(t, 1, 5, na(vwap) ? "—" : str.tostring(vwap, format.mintick), text_size=size.small)
+    table.cell(t, 0, 6, useTP ? "SL (pevný)" : "SL (pásmo)", text_size=size.small), table.cell(t, 1, 6, na(slShow) ? "—" : str.tostring(slShow, format.mintick), text_size=size.small, text_color=color.red)
+    table.cell(t, 0, 7, "TP",       text_size=size.small), table.cell(t, 1, 7, not useTP ? "— (mód Pásmo)" : na(tpFix) ? "—" : str.tostring(tpFix, format.mintick) + "  (±" + str.tostring(tpPoints) + "b)", text_size=size.small, text_color=color.green)
+    table.cell(t, 0, 8, "Sizing",   text_size=size.small), table.cell(t, 1, 8, "VT15 (mimo chart)", text_size=size.small)
 
 // ---- alerty ----
 alertcondition(longSig,  "VWAP Trend BUY",      "NQ VWAP Trend: BUY (vstup na open další svíčky)")
