@@ -1,0 +1,99 @@
+//@version=5
+// =====================================================================
+// PRE-MARKET ORB — 1-min breakout, 1.5:1 RR
+// Range = 9:15-9:30 ET (před cash-open), breakout na 1-min close.
+// SL = 1.5 bodu ZA opačnou stranou range, TP = 1.5:1. Max 1/den, EOD flat 16:00.
+// Volitelný RVOL filtr (objem pre-market zóny / průměr za N dní).
+//
+// SPUSTIT NA 1-MINUTOVÉM grafu, instrument s pre-market daty
+//   (např. CME_MINI:NQ1! — futures obchodují ~24h, takže 9:15-9:30 mají).
+// Pozn.: default hodnoty NEJSOU ověřený edge (viz výzkum) — čistý základ.
+// =====================================================================
+strategy("Pre-Market ORB 1.5:1 RR (9:15-9:30 ET)", overlay=true,
+     initial_capital=100000, default_qty_type=strategy.fixed, default_qty_value=1,
+     pyramiding=0, calc_on_every_tick=false, process_orders_on_close=true,
+     commission_type=strategy.commission.cash_per_order, commission_value=1.0)
+
+// ===== Nastavení =====
+rvolMin   = input.float(1.2, "RVOL filtr (0 = vypnuto)", minval=0.0, step=0.1)
+rvolLen   = input.int(20,  "RVOL lookback (dny)", minval=1)
+rr        = input.float(1.5, "Take-profit = RR × riziko", minval=0.1, step=0.1)
+slBuf     = input.float(1.5, "SL buffer (body za koncem range)", minval=0.0, step=0.25)
+useCutoff = input.bool(false, "Omezit vstup jen do 10:30 ET")
+tz        = "America/New_York"
+
+// ===== Session okna (ET) =====
+inRange   = not na(time(timeframe.period, "0915-0930", tz))   // pre-market range
+afterOpen = not na(time(timeframe.period, "0930-1600", tz))   // obchodní okno
+beforeCut = not na(time(timeframe.period, "0930-1030", tz))   // volitelný cutoff
+eod       = not na(time(timeframe.period, "1559-1600", tz))   // nucený výstup
+
+// ===== Nový den =====
+newDay = ta.change(time("D")) != 0
+
+// ===== Stav (per den) =====
+var float rHi        = na
+var float rLo        = na
+var float pmVol      = na
+var bool  rangeReady = false
+var bool  traded     = false
+var bool  rvolOk     = false
+var float[] pmHist   = array.new_float()
+
+if newDay
+    rHi := na
+    rLo := na
+    pmVol := 0.0
+    rangeReady := false
+    traded := false
+    rvolOk := false
+
+// ===== Build range 9:15-9:30 =====
+if inRange
+    rHi := na(rHi) ? high : math.max(rHi, high)
+    rLo := na(rLo) ? low  : math.min(rLo, low)
+    pmVol := na(pmVol) ? volume : pmVol + volume
+
+// ===== Finalize range + RVOL (první bar po 9:30) =====
+if afterOpen and not rangeReady
+    rangeReady := true
+    base = array.size(pmHist) >= 5 ? array.avg(pmHist) : na
+    rvol = (na(base) or base == 0) ? 0.0 : pmVol / base
+    // warmup / vypnuto / splněno → obchoduj (jinak krátká 1-min historie = 0 obchodů)
+    rvolOk := rvolMin <= 0 or na(base) or rvol >= rvolMin
+    if not na(pmVol)
+        array.push(pmHist, pmVol)
+        if array.size(pmHist) > rvolLen
+            array.shift(pmHist)
+
+// ===== Signál a vstup =====
+canSignal = rangeReady and not traded and rvolOk and strategy.position_size == 0 and afterOpen and (not useCutoff or beforeCut) and not na(rHi)
+longSig  = canSignal and close > rHi
+shortSig = canSignal and close < rLo
+
+if longSig
+    slLong = rLo - slBuf
+    risk = close - slLong
+    if risk > 0
+        traded := true
+        strategy.entry("L", strategy.long)
+        strategy.exit("Lx", from_entry="L", stop=slLong, limit=close + rr * risk)
+
+if shortSig
+    slShort = rHi + slBuf
+    risk = slShort - close
+    if risk > 0
+        traded := true
+        strategy.entry("S", strategy.short)
+        strategy.exit("Sx", from_entry="S", stop=slShort, limit=close - rr * risk)
+
+// ===== EOD flat 16:00 =====
+if eod and strategy.position_size != 0
+    strategy.close_all(comment="EOD")
+
+// ===== Vizualizace =====
+plot(rangeReady ? rHi : na, "Range High", color=color.new(color.teal, 0), linewidth=2, style=plot.style_linebr)
+plot(rangeReady ? rLo : na, "Range Low",  color=color.new(color.teal, 0), linewidth=2, style=plot.style_linebr)
+bgcolor(inRange ? color.new(color.gray, 88) : na, title="Pre-market range zóna")
+plotshape(longSig,  "Long breakout",  shape.triangleup,   location.belowbar, color.new(color.green, 0), size=size.tiny)
+plotshape(shortSig, "Short breakout", shape.triangledown, location.abovebar, color.new(color.red, 0),   size=size.tiny)

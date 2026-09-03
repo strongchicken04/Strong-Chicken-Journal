@@ -1,0 +1,133 @@
+//@version=5
+// =====================================================================
+// OR5 INDIKÁTOR — range první 5-min svíčky (9:30-9:35 ET) — Strong Chicken
+//   OR5 high/low = reaktivní úrovně z Projektu 7 (bounce ~58-60 % vs 52 %).
+//   Čáry jsou KRÁTKÉ (entry→exit) a zůstávají jako HISTORIE trades.
+//   SL = buffer za úrovní, TP = RR × riziko (default RR = 1). 1 obchod/den, EOD flat.
+// POUŽIJ 1-min nebo 5-min chart, ES/NQ futures.
+// =====================================================================
+indicator("OR5 (9:30-9:35) — Strong Chicken", overlay=true, max_lines_count=500, max_labels_count=100)
+
+mode    = input.string("Break-retest", "Mód", options=["Fade", "Breakout", "Break-retest"],
+     tooltip="Fade = reverze na dotek OR5. Breakout = průraz OR5. Break-retest = průraz + návrat na úroveň, pak vstup ve směru průrazu.")
+rr      = input.float(1.0, "TP jako RR × riziko", minval=0.1, step=0.1)
+slBuf   = input.float(1.5, "SL buffer (body za úrovní)", minval=0.0, step=0.25)
+tz = "America/New_York"
+GRN = color.new(color.lime, 0)
+RED = color.new(color.red, 0)
+TEAL= color.new(color.teal, 0)
+
+inOR5     = not na(time(timeframe.period, "0930-0935", tz))
+afterOR5  = not na(time(timeframe.period, "0935-1600", tz))
+eod       = not na(time(timeframe.period, "1559-1600", tz))
+
+// ===== OR5 range (9:30-9:35) =====
+var float rHi = na
+var float rLo = na
+var bool traded = false
+var bool brokeUp = false
+var bool brokeDn = false
+if inOR5 and not inOR5[1]      // 9:30 start
+    rHi := high
+    rLo := low
+    traded := false
+    brokeUp := false
+    brokeDn := false
+else if inOR5
+    rHi := math.max(rHi, high)
+    rLo := math.min(rLo, low)
+
+// ===== OR5 range čáry — KRÁTKÉ (jen dnešní RTH), zůstávají jako historie =====
+var line rHiLine = na
+var line rLoLine = na
+if afterOR5 and not afterOR5[1] and not na(rHi)    // dokončeno v 9:35
+    rHiLine := line.new(bar_index, rHi, bar_index, rHi, color=TEAL, width=1, style=line.style_dashed)
+    rLoLine := line.new(bar_index, rLo, bar_index, rLo, color=TEAL, width=1, style=line.style_dashed)
+if afterOR5 and not na(rHiLine)                    // roste jen do konce RTH dne
+    line.set_x2(rHiLine, bar_index)
+    line.set_x2(rLoLine, bar_index)
+
+// ===== pozice + trade čáry =====
+var int pos = 0
+var float slLvl = na
+var float tpLvl = na
+var line slLine = na
+var line tpLine = na
+var line enLine = na
+var bool trActive = false
+longSig = false
+shortSig = false
+exitSig = false
+
+// prodluž čáry POUZE aktuálního (živého) trade
+if trActive and not na(slLine)
+    line.set_x2(slLine, bar_index)
+    line.set_x2(tpLine, bar_index)
+    line.set_x2(enLine, bar_index)
+
+canSig = not na(rHi) and not traded and pos == 0 and afterOR5
+d = 0
+entryPx = close
+if canSig
+    if mode == "Breakout"
+        if close > rHi
+            d := 1
+            slLvl := rLo - slBuf
+        else if close < rLo
+            d := -1
+            slLvl := rHi + slBuf
+    else if mode == "Fade"
+        if high >= rHi
+            d := -1
+            slLvl := rHi + slBuf
+        else if low <= rLo
+            d := 1
+            slLvl := rLo - slBuf
+    else                              // Break-retest
+        if brokeUp and low <= rHi
+            d := 1
+            slLvl := rHi - slBuf
+        else if brokeDn and high >= rLo
+            d := -1
+            slLvl := rLo + slBuf
+        if not brokeUp and not brokeDn
+            if close > rHi
+                brokeUp := true
+            else if close < rLo
+                brokeDn := true
+
+if d != 0
+    traded := true
+    dir = d
+    risk = math.abs(entryPx - slLvl)
+    tpLvl := entryPx + dir * rr * risk
+    if risk > 0
+        pos := dir
+        longSig := dir == 1
+        shortSig := dir == -1
+        enLine := line.new(bar_index, entryPx, bar_index, entryPx, color=color.new(color.blue, 0), width=1)
+        slLine := line.new(bar_index, slLvl, bar_index, slLvl, color=RED, width=2)
+        tpLine := line.new(bar_index, tpLvl, bar_index, tpLvl, color=GRN, width=2)
+        trActive := true
+
+// ===== exit: SL / TP / EOD — dokresli čáry po exit bar, ale NEMAŽ =====
+if pos != 0
+    hitSL = pos == 1 ? low <= slLvl : high >= slLvl
+    hitTP = pos == 1 ? high >= tpLvl : low <= tpLvl
+    if hitSL or hitTP or eod
+        line.set_x2(slLine, bar_index)
+        line.set_x2(tpLine, bar_index)
+        line.set_x2(enLine, bar_index)
+        exitSig := true
+        pos := 0
+        trActive := false
+
+// ===== vizualizace =====
+bgcolor(inOR5 ? color.new(color.blue, 88) : na, title="OR5 zóna (9:30-9:35)")
+plotshape(longSig,  "LONG",  shape.triangleup,   location.belowbar, GRN, size=size.small, text="LONG")
+plotshape(shortSig, "SHORT", shape.triangledown, location.abovebar, RED, size=size.small, text="SHORT")
+plotshape(exitSig,  "EXIT",  shape.xcross,       location.abovebar, color.new(color.gray,0), size=size.tiny)
+
+alertcondition(longSig,  "OR5 LONG",  "OR5: long signál")
+alertcondition(shortSig, "OR5 SHORT", "OR5: short signál")
+alertcondition(exitSig,  "OR5 EXIT",  "OR5: výstup (SL/TP/EOD)")

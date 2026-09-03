@@ -1,0 +1,74 @@
+[
+ {
+  "tag": "es_base",
+  "finalnav": 79194.0,
+  "cagr": -3.0,
+  "sharpe": -0.56,
+  "mdd": -24.6,
+  "n": 1963,
+  "win": 63.2,
+  "tpdec": 68.3,
+  "tpdec_ci": [
+   66.0,
+   70.5
+  ],
+  "eod": 295,
+  "meanR": -0.02,
+  "stdR": 0.855,
+  "Rsharpe": -0.023
+ },
+ {
+  "tag": "es_filt",
+  "finalnav": 82954.0,
+  "cagr": -2.4,
+  "sharpe": -0.51,
+  "mdd": -22.8,
+  "n": 1513,
+  "win": 62.8,
+  "tpdec": 68.4,
+  "tpdec_ci": [
+   65.8,
+   70.9
+  ],
+  "eod": 239,
+  "meanR": -0.022,
+  "stdR": 0.895,
+  "Rsharpe": -0.024
+ },
+ {
+  "tag": "nq_base",
+  "finalnav": 75698.0,
+  "cagr": -3.5,
+  "sharpe": -1.04,
+  "mdd": -25.7,
+  "n": 1929,
+  "win": 87.9,
+  "tpdec": 91.2,
+  "tpdec_ci": [
+   89.9,
+   92.4
+  ],
+  "eod": 80,
+  "meanR": -0.013,
+  "stdR": 0.478,
+  "Rsharpe": -0.027
+ },
+ {
+  "tag": "nq_filt",
+  "finalnav": 73790.0,
+  "cagr": -3.9,
+  "sharpe": -1.23,
+  "mdd": -27.2,
+  "n": 1488,
+  "win": 87.0,
+  "tpdec": 90.8,
+  "tpdec_ci": [
+   89.1,
+   92.2
+  ],
+  "eod": 69,
+  "meanR": -0.023,
+  "stdR": 0.52,
+  "Rsharpe": -0.045
+ }
+]

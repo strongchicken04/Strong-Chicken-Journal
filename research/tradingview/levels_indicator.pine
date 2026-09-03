@@ -1,0 +1,92 @@
+//@version=5
+// =====================================================================
+// REAKTIVNÍ ÚROVNĚ ES — jen ověřené (Projekt 7, Level Edge Study)
+//   ZELENÉ (bounce): OR5 high, OR5 low (PEVNÉ), VWAP -2σ (developing)
+//   ČERVENÁ (through/magnet): session POC (developing)
+// Kotva = 18:00 ET. POUŽIJ 1-min nebo 5-min chart, ES/NQ futures (ES1!/NQ1!),
+//   zapnuté extended hours. OR5 = high/low první 5-min svíčky 9:30-9:35 ET.
+// Pozn.: OR5 jsou PEVNÉ vodorovné úrovně; VWAP-2σ a POC se z podstaty
+//   VYVÍJEJÍ během session (to je správně, ne chyba).
+// =====================================================================
+indicator("Reaktivní úrovně (OR5 / VWAP-2σ / POC)", overlay=true, max_lines_count=20, max_labels_count=20)
+
+// ===== Nastavení =====
+showOR5  = input.bool(true,  "OR5 high/low (zelená, PEVNÉ)")
+showV2   = input.bool(true,  "VWAP -2σ (zelená, developing)")
+showV3   = input.bool(false, "VWAP +3σ (marginální)")
+showPOC  = input.bool(true,  "POC (červená, developing)")
+showVWAP = input.bool(false, "VWAP střed (kontext)")
+pocBin   = input.float(1.0,  "POC bin (body)", minval=0.25, step=0.25)
+tz = "America/New_York"
+GRN = color.new(color.lime, 0)
+RED = color.new(color.red, 0)
+
+// ===== Kotva 18:00 ET (nezávislá na nastavení session chartu) =====
+etH = hour(time, tz)
+etM = minute(time, tz)
+newSession = (etH == 18 and etM == 0) and not (etH[1] == 18 and etM[1] == 0)
+
+// ===== Session VWAP + σ pásma (reset na 18:00 ET) =====
+[vwapVal, _u2, lo2] = ta.vwap(hlc3, newSession, 2.0)
+[_v3, up3, _l3]     = ta.vwap(hlc3, newSession, 3.0)
+lo2p = newSession ? na : lo2          // přeruš čáru na resetu (žádné spaghetti)
+up3p = newSession ? na : up3
+vwp  = newSession ? na : vwapVal
+
+// ===== OR5 = high/low první 5-min svíčky 9:30-9:35 ET (PEVNÉ rays) =====
+inOR5 = not na(time(timeframe.period, "0930-0935", tz))
+var float or5h = na
+var float or5l = na
+var line lnH = na
+var line lnL = na
+if inOR5 and not inOR5[1]           // start 9:30
+    or5h := high
+    or5l := low
+else if inOR5                        // 9:31-9:35
+    or5h := math.max(or5h, high)
+    or5l := math.min(or5l, low)
+or5done = (not inOR5) and inOR5[1]   // právě dokončeno (9:35)
+if or5done and showOR5
+    if not na(lnH)
+        line.delete(lnH)
+        line.delete(lnL)
+    lnH := line.new(bar_index, or5h, bar_index + 1, or5h, extend=extend.right, color=GRN, width=2)
+    lnL := line.new(bar_index, or5l, bar_index + 1, or5l, extend=extend.right, color=GRN, width=2)
+
+// ===== Session POC (developing volume profile, reset na 18:00) =====
+var map<float, float> vp = map.new<float, float>()
+if newSession
+    map.clear(vp)
+bin  = math.round(hlc3 / pocBin) * pocBin
+prev = map.get(vp, bin)
+map.put(vp, bin, (na(prev) ? 0.0 : prev) + volume)
+float best  = -1.0
+float bestk = na
+for k in map.keys(vp)
+    vv = map.get(vp, k)
+    if vv > best
+        best := vv
+        bestk := k
+pocp = newSession ? na : bestk
+
+// ===== Vykreslení developing úrovní (linebr = žádné spojnice přes reset) =====
+plot(showV2  ? lo2p : na, "VWAP -2σ", color=GRN, linewidth=2, style=plot.style_linebr)
+plot(showV3  ? up3p : na, "VWAP +3σ", color=color.new(color.green, 45), linewidth=1, style=plot.style_linebr)
+plot(showPOC ? pocp : na, "POC",      color=RED, linewidth=2, style=plot.style_linebr)
+plot(showVWAP? vwp  : na, "VWAP",     color=color.new(color.gray, 55), linewidth=1, style=plot.style_linebr)
+
+// ===== Popisky (pravý okraj) =====
+if barstate.islast
+    if showV2 and not na(lo2)
+        label.new(bar_index, lo2, "VWAP -2σ", color=na, textcolor=GRN, style=label.style_label_left, size=size.small)
+    if showPOC and not na(bestk)
+        label.new(bar_index, bestk, "POC", color=na, textcolor=RED, style=label.style_label_left, size=size.small)
+    if showOR5 and not na(or5h)
+        label.new(bar_index, or5h, "OR5 H", color=na, textcolor=GRN, style=label.style_label_left, size=size.small)
+        label.new(bar_index, or5l, "OR5 L", color=na, textcolor=GRN, style=label.style_label_left, size=size.small)
+
+// ===== Alerty na dotek =====
+alertcondition(not na(or5h) and high >= or5h and low <= or5h, "Dotek OR5 High", "Cena na OR5 High")
+alertcondition(not na(or5l) and high >= or5l and low <= or5l, "Dotek OR5 Low",  "Cena na OR5 Low")
+alertcondition(not na(lo2)  and high >= lo2  and low <= lo2,  "Dotek VWAP -2σ", "Cena na VWAP -2σ")
+alertcondition(not na(bestk) and high >= bestk and low <= bestk, "Dotek POC",   "Cena na POC")

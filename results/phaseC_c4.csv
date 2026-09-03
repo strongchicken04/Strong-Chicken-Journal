@@ -1,0 +1,7 @@
+instrument,bucket,n,mean_rr,median_rr
+ES,small,323,0.899,0.785
+ES,med,322,0.919,0.854
+ES,large,323,0.995,0.901
+SPY,small,318,0.87,0.764
+SPY,med,317,0.914,0.828
+SPY,large,318,0.972,0.878

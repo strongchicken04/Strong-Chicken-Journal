@@ -1,0 +1,4 @@
+scenario,cagr,vol,sharpe,mdd,tpd
+GROSS,36.1,16.8,1.88,11.1,16.2
+net_opt,15.1,17.2,0.88,19.1,16.2
+net_cons,-17.8,18.1,-0.96,80.0,16.2
